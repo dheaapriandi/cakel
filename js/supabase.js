@@ -160,20 +160,21 @@ const DataStore = {
   },
   getAttendance(classId, date, semester) {
     const records = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) || [];
+    const targetSem = semester || (window.getCurrentSemester ? window.getCurrentSemester() : '1');
     return records.filter(r => {
       const matchClass = !classId || r.class_id === classId;
       const matchDate = !date || r.date === date;
-      // If date is specified (loading attendance sheet), load by date regardless of semester!
-      // If date is null (loading semester history), include matching semester or legacy records without semester!
-      const matchSem = date ? true : (!semester || !r.semester || String(r.semester) === String(semester));
+      const recordSem = String(r.semester || '1');
+      const matchSem = !targetSem || recordSem === String(targetSem);
       return matchClass && matchDate && matchSem;
     });
   },
   saveAttendanceRecord(classId, date, time, studentStatuses, semester) {
     let records = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) || [];
-    records = records.filter(r => !(r.class_id === classId && r.date === date));
-
     const sem = semester || (window.getCurrentSemester ? window.getCurrentSemester() : '1');
+
+    // Remove ONLY attendance for the SAME class, SAME date, AND SAME semester
+    records = records.filter(r => !(r.class_id === classId && r.date === date && String(r.semester || '1') === String(sem)));
 
     studentStatuses.forEach(item => {
       const newRec = {
@@ -183,7 +184,7 @@ const DataStore = {
         time: time || new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
         student_id: item.student_id,
         status: item.status,
-        semester: sem
+        semester: String(sem)
       };
       records.push(newRec);
       this.syncToCloud('attendance', newRec);

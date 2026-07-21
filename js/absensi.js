@@ -7,8 +7,9 @@ function renderAbsensiTab(classId) {
   }
 
   const currentDate = datePicker.value;
+  const semester = window.getCurrentSemester ? window.getCurrentSemester() : '1';
   const students = window.DataStore.getStudents(classId);
-  const existingAttendance = window.DataStore.getAttendance(classId, currentDate);
+  const existingAttendance = window.DataStore.getAttendance(classId, currentDate, semester);
   
   const container = document.getElementById('absensi-student-list');
   if (!container) return;
