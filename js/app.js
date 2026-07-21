@@ -284,15 +284,30 @@ function renderClassListModal() {
   if (!container) return;
 
   const classes = window.DataStore.getClasses();
+  if (classes.length === 0) {
+    container.innerHTML = '<div class="text-muted p-12">Belum ada kelas. Silakan tambah kelas baru di atas.</div>';
+    return;
+  }
+
   let html = '';
   classes.forEach(c => {
     html += `
-      <div class="student-item-row">
+      <div class="student-item-row" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
         <span class="student-name">${c.name}</span>
+        <button class="btn-text" style="color: #ef4444; font-size: 13px; font-weight: 600;" onclick="deleteClassConfirm('${c.id}', '${c.name}')">🗑️ Hapus</button>
       </div>
     `;
   });
   container.innerHTML = html;
+}
+
+function deleteClassConfirm(classId, className) {
+  if (confirm(`Apakah Anda yakin ingin menghapus "${className}" beserta seluruh data siswa di dalamnya?`)) {
+    window.DataStore.removeClass(classId);
+    setupClassDropdown();
+    renderClassListModal();
+    refreshAppViews();
+  }
 }
 
 function renderStudentListModal() {
@@ -310,16 +325,28 @@ function renderStudentListModal() {
   let html = '';
   students.forEach(s => {
     html += `
-      <div class="student-item-row">
+      <div class="student-item-row" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
         <div>
           <div class="student-name">${s.name}</div>
           <div class="student-nis">${s.nis ? 'NIS: ' + s.nis : ''}</div>
         </div>
+        <button class="btn-text" style="color: #ef4444; font-size: 13px; font-weight: 600;" onclick="deleteStudentConfirm('${s.id}', '${s.name}')">🗑️ Hapus</button>
       </div>
     `;
   });
   container.innerHTML = html;
 }
+
+function deleteStudentConfirm(studentId, studentName) {
+  if (confirm(`Hapus siswa "${studentName}" dari kelas ini?`)) {
+    window.DataStore.removeStudent(studentId);
+    renderStudentListModal();
+    refreshAppViews();
+  }
+}
+
+window.deleteClassConfirm = deleteClassConfirm;
+window.deleteStudentConfirm = deleteStudentConfirm;
 
 function setupSupabaseSettings() {
   const cfg = window.getSupabaseConfig();

@@ -85,6 +85,24 @@ const DataStore = {
     this.syncToCloud('classes', newClass);
     return newClass;
   },
+  removeClass(id) {
+    let classes = this.getClasses();
+    classes = classes.filter(c => c.id !== id);
+    localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify(classes));
+
+    // Also cascade remove associated students, attendance, grades locally
+    let students = JSON.parse(localStorage.getItem(STORAGE_KEYS.STUDENTS)) || [];
+    students = students.filter(s => s.class_id !== id);
+    localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
+
+    let attendance = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) || [];
+    attendance = attendance.filter(a => a.class_id !== id);
+    localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(attendance));
+
+    let grades = JSON.parse(localStorage.getItem(STORAGE_KEYS.GRADES)) || [];
+    grades = grades.filter(g => g.class_id !== id);
+    localStorage.setItem(STORAGE_KEYS.GRADES, JSON.stringify(grades));
+  },
   getStudents(classId) {
     const students = JSON.parse(localStorage.getItem(STORAGE_KEYS.STUDENTS)) || [];
     return classId ? students.filter(s => s.class_id === classId) : students;
@@ -96,6 +114,11 @@ const DataStore = {
     localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
     this.syncToCloud('students', newStudent);
     return newStudent;
+  },
+  removeStudent(id) {
+    let students = JSON.parse(localStorage.getItem(STORAGE_KEYS.STUDENTS)) || [];
+    students = students.filter(s => s.id !== id);
+    localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
   },
   getAttendance(classId, date) {
     const records = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) || [];

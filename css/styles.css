@@ -122,14 +122,15 @@ body {
 }
 
 .class-icon {
-  width: 44px;
-  height: 44px;
-  background-color: #64748b;
+  width: 42px;
+  height: 42px;
+  background-color: #52525b;
   color: #ffffff;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .class-dropdown-select {
