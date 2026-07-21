@@ -1,4 +1,4 @@
-// Supabase & LocalStorage Data Engine with Valid UUID Generator
+// Supabase & LocalStorage Data Engine with Smart Merge & Valid UUIDs
 const STORAGE_KEYS = {
   CLASSES: 'absensi_classes_data',
   STUDENTS: 'absensi_students_data',
@@ -47,22 +47,27 @@ function saveSupabaseConfig(url, key) {
   return initSupabase();
 }
 
-// Initial Seed Data with valid UUIDs
+// Initial Seed Data with valid UUIDs and auto-sync to cloud
 function loadInitialSeedData() {
+  const defaultClass = { id: 'a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d', name: 'Kelas X DKV' };
+  const defaultStudent = { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d4e5', class_id: 'a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d', name: 'Ahmad Rizky', nis: '1001' };
+
   let classes = JSON.parse(localStorage.getItem(STORAGE_KEYS.CLASSES));
   if (!classes || classes.length === 0) {
-    classes = [
-      { id: 'a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d', name: 'Kelas X DKV' }
-    ];
+    classes = [defaultClass];
     localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify(classes));
+    if (window.DataStore && window.DataStore.syncToCloud) {
+      window.DataStore.syncToCloud('classes', defaultClass);
+    }
   }
 
   let students = JSON.parse(localStorage.getItem(STORAGE_KEYS.STUDENTS));
   if (!students || students.length === 0) {
-    students = [
-      { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d4e5', class_id: 'a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d', name: 'Ahmad Rizky', nis: '1001' }
-    ];
+    students = [defaultStudent];
     localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
+    if (window.DataStore && window.DataStore.syncToCloud) {
+      window.DataStore.syncToCloud('students', defaultStudent);
+    }
   }
 
   let attendance = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE));
@@ -76,7 +81,7 @@ function loadInitialSeedData() {
   }
 }
 
-// Data Access API
+// Data Access API with Smart Merging
 const DataStore = {
   getClasses() {
     return JSON.parse(localStorage.getItem(STORAGE_KEYS.CLASSES)) || [];
@@ -176,9 +181,8 @@ const DataStore = {
   async syncToCloud(tableName, payload) {
     if (supabaseClient) {
       try {
-        const { data, error } = await supabaseClient.from(tableName).upsert([payload]);
+        const { error } = await supabaseClient.from(tableName).upsert([payload]);
         if (error) console.error(`Cloud Sync Error (${tableName}):`, error);
-        else console.log(`Cloud Sync Success (${tableName}):`, payload);
       } catch (err) {
         console.error("Cloud Sync Exception:", err);
       }
@@ -197,28 +201,63 @@ const DataStore = {
   async fetchFromCloud() {
     if (!supabaseClient) return false;
     try {
-      // Fetch classes
+      // Smart Merge Classes (Combine Local + Cloud)
       const { data: cloudClasses, error: errCls } = await supabaseClient.from('classes').select('*');
-      if (!errCls && cloudClasses && cloudClasses.length > 0) {
-        localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify(cloudClasses));
+      if (!errCls && cloudClasses) {
+        const localClasses = JSON.parse(localStorage.getItem(STORAGE_KEYS.CLASSES)) || [];
+        const classMap = new Map();
+        localClasses.forEach(c => classMap.set(c.id, c));
+        cloudClasses.forEach(c => classMap.set(c.id, c));
+
+        const mergedClasses = Array.from(classMap.values());
+        localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify(mergedClasses));
+
+        // Push any local classes missing in cloud
+        localClasses.forEach(lc => {
+          if (!cloudClasses.some(cc => cc.id === lc.id)) {
+            this.syncToCloud('classes', lc);
+          }
+        });
       }
 
-      // Fetch students
+      // Smart Merge Students
       const { data: cloudStudents, error: errStd } = await supabaseClient.from('students').select('*');
-      if (!errStd && cloudStudents && cloudStudents.length > 0) {
-        localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(cloudStudents));
+      if (!errStd && cloudStudents) {
+        const localStudents = JSON.parse(localStorage.getItem(STORAGE_KEYS.STUDENTS)) || [];
+        const stdMap = new Map();
+        localStudents.forEach(s => stdMap.set(s.id, s));
+        cloudStudents.forEach(s => stdMap.set(s.id, s));
+
+        const mergedStudents = Array.from(stdMap.values());
+        localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(mergedStudents));
+
+        localStudents.forEach(ls => {
+          if (!cloudStudents.some(cs => cs.id === ls.id)) {
+            this.syncToCloud('students', ls);
+          }
+        });
       }
 
-      // Fetch attendance
+      // Smart Merge Attendance
       const { data: cloudAtt, error: errAtt } = await supabaseClient.from('attendance').select('*');
-      if (!errAtt && cloudAtt && cloudAtt.length > 0) {
-        localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(cloudAtt));
+      if (!errAtt && cloudAtt) {
+        const localAtt = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) || [];
+        const attMap = new Map();
+        localAtt.forEach(a => attMap.set(a.id, a));
+        cloudAtt.forEach(a => attMap.set(a.id, a));
+
+        localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(Array.from(attMap.values())));
       }
 
-      // Fetch grades
+      // Smart Merge Grades
       const { data: cloudGrades, error: errGrd } = await supabaseClient.from('grades').select('*');
-      if (!errGrd && cloudGrades && cloudGrades.length > 0) {
-        localStorage.setItem(STORAGE_KEYS.GRADES, JSON.stringify(cloudGrades));
+      if (!errGrd && cloudGrades) {
+        const localGrades = JSON.parse(localStorage.getItem(STORAGE_KEYS.GRADES)) || [];
+        const grdMap = new Map();
+        localGrades.forEach(g => grdMap.set(g.id, g));
+        cloudGrades.forEach(g => grdMap.set(g.id, g));
+
+        localStorage.setItem(STORAGE_KEYS.GRADES, JSON.stringify(Array.from(grdMap.values())));
       }
 
       return true;
