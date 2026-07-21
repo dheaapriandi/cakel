@@ -1,4 +1,4 @@
-// Supabase & LocalStorage Data Engine
+// Supabase & LocalStorage Data Engine with Valid UUID Generator
 const STORAGE_KEYS = {
   CLASSES: 'absensi_classes_data',
   STUDENTS: 'absensi_students_data',
@@ -8,6 +8,16 @@ const STORAGE_KEYS = {
 };
 
 let supabaseClient = null;
+
+function generateUUID() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
 
 function initSupabase() {
   const config = getSupabaseConfig();
@@ -37,12 +47,12 @@ function saveSupabaseConfig(url, key) {
   return initSupabase();
 }
 
-// Initial Seed Data matching screenshot ("Kelas X DKV", 1 student)
+// Initial Seed Data with valid UUIDs
 function loadInitialSeedData() {
   let classes = JSON.parse(localStorage.getItem(STORAGE_KEYS.CLASSES));
   if (!classes || classes.length === 0) {
     classes = [
-      { id: 'cls-1', name: 'Kelas X DKV' }
+      { id: 'a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d', name: 'Kelas X DKV' }
     ];
     localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify(classes));
   }
@@ -50,25 +60,19 @@ function loadInitialSeedData() {
   let students = JSON.parse(localStorage.getItem(STORAGE_KEYS.STUDENTS));
   if (!students || students.length === 0) {
     students = [
-      { id: 'std-1', class_id: 'cls-1', name: 'Ahmad Rizky', nis: '1001' }
+      { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d4e5', class_id: 'a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d', name: 'Ahmad Rizky', nis: '1001' }
     ];
     localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
   }
 
   let attendance = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE));
-  if (!attendance || attendance.length === 0) {
-    attendance = [
-      { id: 'att-1', class_id: 'cls-1', date: '2026-07-24', time: '09.18', student_id: 'std-1', status: 'Hadir' }
-    ];
-    localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(attendance));
+  if (!attendance) {
+    localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify([]));
   }
 
   let grades = JSON.parse(localStorage.getItem(STORAGE_KEYS.GRADES));
-  if (!grades || grades.length === 0) {
-    grades = [
-      { id: 'grd-1', class_id: 'cls-1', date: '2026-07-21', category: 'Ulangan', title: 'Ulangan', student_id: 'std-1', score: 80 }
-    ];
-    localStorage.setItem(STORAGE_KEYS.GRADES, JSON.stringify(grades));
+  if (!grades) {
+    localStorage.setItem(STORAGE_KEYS.GRADES, JSON.stringify([]));
   }
 }
 
@@ -79,7 +83,7 @@ const DataStore = {
   },
   addClass(name) {
     const classes = this.getClasses();
-    const newClass = { id: 'cls-' + Date.now(), name };
+    const newClass = { id: generateUUID(), name };
     classes.push(newClass);
     localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify(classes));
     this.syncToCloud('classes', newClass);
@@ -90,7 +94,6 @@ const DataStore = {
     classes = classes.filter(c => c.id !== id);
     localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify(classes));
 
-    // Also cascade remove associated students, attendance, grades locally
     let students = JSON.parse(localStorage.getItem(STORAGE_KEYS.STUDENTS)) || [];
     students = students.filter(s => s.class_id !== id);
     localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
@@ -111,7 +114,7 @@ const DataStore = {
   },
   addStudent(classId, name, nis) {
     const students = JSON.parse(localStorage.getItem(STORAGE_KEYS.STUDENTS)) || [];
-    const newStudent = { id: 'std-' + Date.now(), class_id: classId, name, nis: nis || '' };
+    const newStudent = { id: generateUUID(), class_id: classId, name, nis: nis || '' };
     students.push(newStudent);
     localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
     this.syncToCloud('students', newStudent);
@@ -130,12 +133,11 @@ const DataStore = {
   },
   saveAttendanceRecord(classId, date, time, studentStatuses) {
     let records = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) || [];
-    // Remove existing records for this class & date
     records = records.filter(r => !(r.class_id === classId && r.date === date));
 
     studentStatuses.forEach(item => {
       const newRec = {
-        id: 'att-' + Date.now() + '-' + item.student_id,
+        id: generateUUID(),
         class_id: classId,
         date: date,
         time: time || new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
@@ -157,7 +159,7 @@ const DataStore = {
     
     studentScores.forEach(item => {
       const newGrade = {
-        id: 'grd-' + Date.now() + '-' + item.student_id,
+        id: generateUUID(),
         class_id: classId,
         date: date,
         category: category,
@@ -174,8 +176,9 @@ const DataStore = {
   async syncToCloud(tableName, payload) {
     if (supabaseClient) {
       try {
-        const { error } = await supabaseClient.from(tableName).upsert([payload]);
+        const { data, error } = await supabaseClient.from(tableName).upsert([payload]);
         if (error) console.error(`Cloud Sync Error (${tableName}):`, error);
+        else console.log(`Cloud Sync Success (${tableName}):`, payload);
       } catch (err) {
         console.error("Cloud Sync Exception:", err);
       }
@@ -231,3 +234,4 @@ window.getSupabaseConfig = getSupabaseConfig;
 window.saveSupabaseConfig = saveSupabaseConfig;
 window.initSupabase = initSupabase;
 window.loadInitialSeedData = loadInitialSeedData;
+window.generateUUID = generateUUID;

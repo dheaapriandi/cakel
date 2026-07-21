@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await window.DataStore.fetchFromCloud();
   }
 
-  // Setup Class Dropdown
+  // Setup Class Dropdown with cloud-restored classes
   setupClassDropdown();
 
   // Setup Navigation Tabs
