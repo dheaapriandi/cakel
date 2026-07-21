@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cakel-v1';
+const CACHE_NAME = 'cakel-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -12,7 +12,8 @@ const ASSETS_TO_CACHE = [
   './js/supabase.js',
   './js/pwa.js',
   './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icons/icon-512.png',
+  './icons/icon.svg'
 ];
 
 self.addEventListener('install', (event) => {
@@ -40,9 +41,8 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Network first for Supabase API requests, Cache first for local app assets
-  if (event.request.url.includes('supabase.co')) {
-    event.respondWith(fetch(event.request));
+  if (event.request.url.includes('supabase.co') || event.request.url.includes('jsdelivr.net') || event.request.url.includes('googleapis.com')) {
+    event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
     return;
   }
 
@@ -62,7 +62,6 @@ self.addEventListener('fetch', (event) => {
         return response;
       });
     }).catch(() => {
-      // Offline fallback
       return caches.match('./index.html');
     })
   );
