@@ -186,6 +186,8 @@ const DataStore = {
   },
   saveGradeRecord(classId, date, category, studentScores) {
     let grades = JSON.parse(localStorage.getItem(STORAGE_KEYS.GRADES)) || [];
+    // Remove existing records for same class, date, and category to prevent duplicates
+    grades = grades.filter(g => !(g.class_id === classId && g.date === date && g.category === category));
     
     studentScores.forEach(item => {
       const newGrade = {
@@ -202,6 +204,19 @@ const DataStore = {
     });
 
     localStorage.setItem(STORAGE_KEYS.GRADES, JSON.stringify(grades));
+  },
+  removeGradeRecord(classId, date, category) {
+    let grades = JSON.parse(localStorage.getItem(STORAGE_KEYS.GRADES)) || [];
+    grades = grades.filter(g => !(g.class_id === classId && g.date === date && g.category === category));
+    localStorage.setItem(STORAGE_KEYS.GRADES, JSON.stringify(grades));
+
+    if (supabaseClient) {
+      supabaseClient.from('grades').delete()
+        .eq('class_id', classId)
+        .eq('date', date)
+        .eq('category', category)
+        .then(({ error }) => { if (error) console.error('Cloud Delete Grade Error:', error); });
+    }
   },
   async syncToCloud(tableName, payload) {
     if (supabaseClient) {

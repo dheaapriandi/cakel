@@ -43,14 +43,19 @@ function renderNilaiTab(classId) {
     const isToday = group.date === todayStr;
 
     const formattedDate = window.formatDateIndo(group.date);
+    const encodedTitle = encodeURIComponent(group.title);
 
-    // Render Exact Match to Screenshot 1 & 2:
-    // Dark pill badge "HARI INI", Date "21 Jul 2026", Title "Ulangan", Big Score "80", Rata-rata, Tertinggi, Terendah
     html += `
       <div class="history-item-card">
-        <div class="history-card-header">
-          ${isToday ? '<span class="pill-badge">HARI INI</span>' : ''}
-          <span class="history-date">${formattedDate}</span>
+        <div class="history-card-header" style="justify-content: space-between;">
+          <div>
+            ${isToday ? '<span class="pill-badge">HARI INI</span>' : ''}
+            <span class="history-date">${formattedDate}</span>
+          </div>
+          <div>
+            <button class="btn-text" style="color: #4f46e5; font-size: 13px; font-weight: 600;" onclick="viewOrEditExamRecord('${group.date}', '${encodedTitle}')">✏️ Lihat & Edit</button>
+            <button class="btn-text" style="color: #ef4444; font-size: 13px; font-weight: 600; margin-left: 8px;" onclick="deleteExamRecordConfirm('${classId}', '${group.date}', '${encodedTitle}')">🗑️ Hapus</button>
+          </div>
         </div>
         <div class="history-exam-title">${group.title}</div>
         <div class="history-main-score">${avg}</div>
@@ -67,6 +72,51 @@ function renderNilaiTab(classId) {
   container.innerHTML = html;
 }
 
+function viewOrEditExamRecord(date, encodedTitle) {
+  const title = decodeURIComponent(encodedTitle);
+  const currentClassId = document.getElementById('class-dropdown').value;
+  const students = window.DataStore.getStudents(currentClassId);
+  const grades = window.DataStore.getGrades(currentClassId);
+
+  const titleInput = document.getElementById('input-nilai-title');
+  const dateInput = document.getElementById('input-nilai-date');
+  if (titleInput) titleInput.value = title;
+  if (dateInput) dateInput.value = date;
+
+  // Build map of existing student scores
+  const scoreMap = new Map();
+  grades.filter(g => g.date === date && (g.category === title || g.title === title)).forEach(g => {
+    scoreMap.set(g.student_id, g.score);
+  });
+
+  const container = document.getElementById('nilai-students-container');
+  if (container) {
+    let html = '';
+    students.forEach(s => {
+      const existingScore = scoreMap.has(s.id) ? scoreMap.get(s.id) : 80;
+      html += `
+        <div class="student-item-row" data-student-id="${s.id}">
+          <div class="student-name">${s.name}</div>
+          <input type="number" min="0" max="100" class="form-input score-input" style="width: 80px; text-align: center;" placeholder="0-100" value="${existingScore}">
+        </div>
+      `;
+    });
+    container.innerHTML = html;
+  }
+
+  const modal = document.getElementById('modal-input-nilai');
+  if (modal) modal.classList.add('open');
+}
+
+function deleteExamRecordConfirm(classId, date, encodedTitle) {
+  const title = decodeURIComponent(encodedTitle);
+  const formattedDate = window.formatDateIndo(date);
+  if (confirm(`Apakah Anda yakin ingin menghapus data nilai "${title}" pada tanggal ${formattedDate}?`)) {
+    window.DataStore.removeGradeRecord(classId, date, title);
+    if (window.refreshAppViews) window.refreshAppViews();
+  }
+}
+
 function openInputNilaiModal() {
   const currentClassId = document.getElementById('class-dropdown').value;
   const students = window.DataStore.getStudents(currentClassId);
@@ -75,6 +125,9 @@ function openInputNilaiModal() {
     alert('Tambah data siswa terlebih dahulu di menu Pengaturan.');
     return;
   }
+
+  const titleInput = document.getElementById('input-nilai-title');
+  if (titleInput) titleInput.value = 'Ulangan Harian';
 
   const dateInput = document.getElementById('input-nilai-date');
   if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
@@ -129,3 +182,5 @@ function saveInputNilai() {
 window.renderNilaiTab = renderNilaiTab;
 window.openInputNilaiModal = openInputNilaiModal;
 window.saveInputNilai = saveInputNilai;
+window.viewOrEditExamRecord = viewOrEditExamRecord;
+window.deleteExamRecordConfirm = deleteExamRecordConfirm;
