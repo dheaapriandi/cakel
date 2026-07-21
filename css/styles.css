@@ -191,11 +191,6 @@ body {
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 16px;
   }
-
-  .fab-container {
-    right: 40px;
-    bottom: 40px;
-  }
 }
 
 /* APP HEADER */
@@ -602,39 +597,67 @@ body {
 /* FLOATING ACTION BUTTONS (FAB) */
 .fab-container {
   position: fixed;
-  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
-  right: max(16px, calc(50% - 220px));
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  right: 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  z-index: 99;
-}
-@media (max-width: 768px) {
-  .fab-container {
-    right: 16px;
-  }
+  align-items: flex-end;
+  gap: 10px;
+  z-index: 999;
 }
 .fab {
-  width: 54px;
-  height: 54px;
+  height: 52px;
   border-radius: 18px;
   border: none;
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  gap: 8px;
+  padding: 0 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
   cursor: pointer;
-  transition: transform 0.15s ease, opacity 0.15s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .fab:active {
-  transform: scale(0.92);
+  transform: scale(0.94);
 }
 .fab-excel {
   background-color: var(--btn-green);
 }
 .fab-add {
   background-color: var(--btn-black);
+}
+.fab-text {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .fab {
+    width: 52px;
+    padding: 0;
+  }
+  .fab-text {
+    display: none;
+  }
+}
+
+@media (min-width: 769px) {
+  .fab-container {
+    bottom: 32px !important;
+    right: 32px !important;
+  }
+  .fab {
+    height: 48px;
+    border-radius: 24px;
+    padding: 0 20px;
+  }
+  .fab:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  }
 }
 
 /* BOTTOM NAVIGATION */
