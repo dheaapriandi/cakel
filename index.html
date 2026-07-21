@@ -35,7 +35,7 @@
 <body>
 
   <!-- LOGIN SCREEN OVERLAY -->
-  <div id="login-screen" class="login-overlay">
+  <div id="login-screen" class="login-overlay" style="display: none;">
     <div class="login-card">
       <div class="login-header">
         <div class="login-logo">
@@ -62,6 +62,16 @@
       <div class="text-muted text-center mt-12" style="font-size: 11px;">Default Login: username <b>admin</b> | password <b>admin</b></div>
     </div>
   </div>
+  <script>
+    (function() {
+      try {
+        var loggedIn = localStorage.getItem('absensi_session_logged_in') === 'true';
+        if (!loggedIn) {
+          document.getElementById('login-screen').style.display = 'flex';
+        }
+      } catch (e) {}
+    })();
+  </script>
 
   <!-- DESKTOP SIDEBAR NAVIGATION -->
   <aside class="desktop-sidebar">
