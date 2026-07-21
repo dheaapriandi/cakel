@@ -297,7 +297,12 @@ function setupFABs() {
 
   if (exportBtn) {
     exportBtn.addEventListener('click', () => {
-      window.exportDataToExcel(getCurrentClassId());
+      const activeTab = document.querySelector('.bottom-nav .nav-item.active')?.getAttribute('data-tab');
+      if (activeTab === 'tab-beranda') {
+        window.saveCurrentAbsensi(getCurrentClassId());
+      } else {
+        window.exportDataToExcel(getCurrentClassId());
+      }
     });
   }
 
@@ -309,14 +314,16 @@ function setupFABs() {
 
   if (addBtn) {
     addBtn.addEventListener('click', () => {
-      const activeTab = document.querySelector('.bottom-nav .nav-item.active').getAttribute('data-tab');
-      if (activeTab === 'tab-nilai') {
+      const activeTab = document.querySelector('.bottom-nav .nav-item.active')?.getAttribute('data-tab');
+      if (activeTab === 'tab-absensi') {
+        renderStudentListModal();
+        const modal = document.getElementById('modal-manage-students');
+        if (modal) modal.classList.add('open');
+      } else if (activeTab === 'tab-nilai') {
         window.openInputNilaiModal();
-      } else if (activeTab === 'tab-absensi') {
-        window.saveCurrentAbsensi(getCurrentClassId());
       } else {
         // Default on Beranda
-        window.openInputNilaiModal();
+        document.querySelector('[data-tab="tab-absensi"]')?.click();
       }
     });
   }
