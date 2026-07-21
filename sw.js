@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cakel-v2';
+const CACHE_NAME = 'cakel-v3';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
