@@ -115,7 +115,8 @@ const DataStore = {
   },
   getStudents(classId) {
     const students = JSON.parse(localStorage.getItem(STORAGE_KEYS.STUDENTS)) || [];
-    return classId ? students.filter(s => s.class_id === classId) : students;
+    const filtered = classId ? students.filter(s => s.class_id === classId) : students;
+    return filtered.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'id', { sensitivity: 'base' }));
   },
   addStudent(classId, name, nis) {
     const students = JSON.parse(localStorage.getItem(STORAGE_KEYS.STUDENTS)) || [];
@@ -253,6 +254,7 @@ const DataStore = {
         cloudStudents.forEach(s => stdMap.set(s.id, s));
 
         const mergedStudents = Array.from(stdMap.values());
+        mergedStudents.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'id', { sensitivity: 'base' }));
         localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(mergedStudents));
 
         localStudents.forEach(ls => {
