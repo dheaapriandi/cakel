@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="Aplikasi Absensi dan Nilai Siswa PWA">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Absensi & Nilai">
+  
+  <title>Absensi & Nilai Siswa</title>
+  
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  
+  <!-- Font Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="./css/styles.css">
+  
+  <!-- SheetJS for Excel Export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <h1 id="page-title" class="page-title">Beranda</h1>
+    <div class="header-actions">
+      <button class="icon-btn menu-btn" id="header-menu-btn" title="Menu Options">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Scrollable Content Container -->
+  <main class="main-content">
+
+    <!-- Class Selector Banner Card (Available on all tabs) -->
+    <div class="class-card" id="class-selector-card">
+      <div class="class-info">
+        <div class="class-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 3L1 9l11 6l9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
+          </svg>
+        </div>
+        <select id="class-dropdown" class="class-dropdown-select">
+          <!-- Populated by JS -->
+        </select>
+      </div>
+      <div class="class-arrow">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 18l6-6-6-6"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- TAB 1: BERANDA -->
+    <section id="tab-beranda" class="tab-page active">
+      <!-- Attendance Line Chart Card -->
+      <div class="card chart-card">
+        <h3 class="card-subtitle-caps">GRAFIK KEHADIRAN 6 BULAN TERAKHIR</h3>
+        <div class="chart-container">
+          <svg id="attendance-chart" viewBox="0 0 320 180" class="svg-chart">
+            <!-- Rendered by chart.js -->
+          </svg>
+        </div>
+      </div>
+
+      <!-- Kehadiran Hari Ini Card -->
+      <div class="card summary-card">
+        <div class="summary-header">
+          <div>
+            <span class="card-label">Kehadiran Hari Ini</span>
+            <div class="big-percentage" id="today-percentage">100%</div>
+          </div>
+          <div class="total-count-right">
+            <span class="card-label">Hadir / Total</span>
+            <div class="total-fraction" id="today-fraction">1 / 1</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detail Kehadiran Card -->
+      <div class="card detail-card">
+        <span class="card-subtitle-caps">DETAIL KEHADIRAN</span>
+        <div class="status-grid">
+          <div class="status-item">
+            <span class="status-num text-hadir" id="count-hadir">1</span>
+            <span class="status-lbl">Hadir</span>
+          </div>
+          <div class="status-item">
+            <span class="status-num text-izin" id="count-izin">0</span>
+            <span class="status-lbl">Izin</span>
+          </div>
+          <div class="status-item">
+            <span class="status-num text-sakit" id="count-sakit">0</span>
+            <span class="status-lbl">Sakit</span>
+          </div>
+          <div class="status-item">
+            <span class="status-num text-alpa" id="count-alpa">0</span>
+            <span class="status-lbl">Alpa</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Absensi Terakhir Card -->
+      <div class="card last-entry-card">
+        <div class="card-top-row">
+          <span class="card-title-bold">Absensi Terakhir</span>
+          <span class="card-date-light" id="last-absensi-date">24 Jul 2026, 09.18</span>
+        </div>
+        <div class="big-fraction-value" id="last-absensi-ratio">1/1</div>
+        <div class="status-grid mini">
+          <div class="status-item"><span class="status-num text-hadir" id="last-hadir">1</span><span class="status-lbl">Hadir</span></div>
+          <div class="status-item"><span class="status-num text-izin" id="last-izin">0</span><span class="status-lbl">Izin</span></div>
+          <div class="status-item"><span class="status-num text-sakit" id="last-sakit">0</span><span class="status-lbl">Sakit</span></div>
+          <div class="status-item"><span class="status-num text-alpa" id="last-alpa">0</span><span class="status-lbl">Alpa</span></div>
+        </div>
+      </div>
+
+      <!-- Nilai Terakhir Card -->
+      <div class="card last-grade-card">
+        <div class="card-top-row">
+          <span class="card-title-bold">Nilai Terakhir</span>
+          <span class="card-date-light" id="last-grade-date">21 Jul 2026</span>
+        </div>
+        <div class="grade-category" id="last-grade-title">Ulangan</div>
+        <div class="big-fraction-value" id="last-grade-students">1/1</div>
+        <div class="grade-stats-grid">
+          <div class="grade-stat-col">
+            <span class="grade-stat-num" id="last-grade-avg">80</span>
+            <span class="status-lbl">Rata-rata</span>
+          </div>
+          <div class="grade-stat-col">
+            <span class="grade-stat-num" id="last-grade-max">80</span>
+            <span class="status-lbl">Tertinggi</span>
+          </div>
+          <div class="grade-stat-col">
+            <span class="grade-stat-num" id="last-grade-min">80</span>
+            <span class="status-lbl">Terendah</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- TAB 2: ABSENSI -->
+    <section id="tab-absensi" class="tab-page">
+      <div class="page-section-header">
+        <h2>Pencatatan Absensi</h2>
+        <input type="date" id="absensi-date-picker" class="custom-date-input">
+      </div>
+
+      <div class="card">
+        <div class="roster-header">
+          <span>Daftar Siswa</span>
+          <button class="btn-text" id="mark-all-hadir-btn">Tandai Semua Hadir</button>
+        </div>
+        <div id="absensi-student-list" class="student-list-container">
+          <!-- Rendered by absensi.js -->
+        </div>
+        <div class="form-actions mt-16">
+          <button class="btn btn-primary btn-block" id="save-absensi-btn">Simpan Absensi Hari Ini</button>
+        </div>
+      </div>
+
+      <div class="section-title">Riwayat Absensi</div>
+      <div id="absensi-history-list">
+        <!-- Rendered by absensi.js -->
+      </div>
+    </section>
+
+
+    <!-- TAB 3: NILAI -->
+    <section id="tab-nilai" class="tab-page">
+      <div class="section-title">Riwayat Nilai</div>
+      
+      <div id="nilai-history-list" class="history-list">
+        <!-- Matching Screenshot 1 & 2 -->
+      </div>
+    </section>
+
+
+    <!-- TAB 4: PENGATURAN -->
+    <section id="tab-pengaturan" class="tab-page">
+      <div class="card setting-card">
+        <h3>PWA & Install Aplikasi</h3>
+        <p class="text-muted">Install aplikasi ini di Android Anda tanpa compile APK!</p>
+        <button class="btn btn-success mt-12" id="install-pwa-btn">
+          📱 Install ke Layar Utama (APK Standalone)
+        </button>
+      </div>
+
+      <div class="card setting-card">
+        <h3>Kelola Kelas & Siswa</h3>
+        <div class="btn-group-vertical">
+          <button class="btn btn-outline" id="manage-classes-btn">🏫 Kelola Daftar Kelas</button>
+          <button class="btn btn-outline" id="manage-students-btn">👨‍🎓 Kelola Data Siswa</button>
+        </div>
+      </div>
+
+      <div class="card setting-card">
+        <h3>Integrasi Cloud Supabase</h3>
+        <p class="text-muted">Hubungkan Supabase untuk backup & sinkronisasi data online real-time.</p>
+        <div class="form-group mt-12">
+          <label>Supabase Project URL</label>
+          <input type="text" id="cfg-supabase-url" placeholder="https://xyz.supabase.co" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>Supabase Anon Key</label>
+          <input type="password" id="cfg-supabase-key" placeholder="eyJhbGciOiJIUzI1Ni..." class="form-input">
+        </div>
+        <button class="btn btn-primary mt-12" id="save-supabase-config">Simpan & Hubungkan Supabase</button>
+        <div id="supabase-status" class="status-msg mt-8"></div>
+      </div>
+
+      <div class="card setting-card">
+        <h3>Ekspor Data</h3>
+        <button class="btn btn-excel btn-block" id="export-all-excel-btn">
+          📊 Ekspor Semua Data Ke Excel (.xlsx)
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FLOATING ACTION BUTTONS (FAB) -->
+  <div class="fab-container" id="fab-container">
+    <button class="fab fab-excel" id="fab-export-btn" title="Ekspor Excel">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+      </svg>
+    </button>
+    <button class="fab fab-add" id="fab-primary-btn" title="Tambah Data">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- BOTTOM NAVIGATION BAR -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-tab="tab-beranda">
+      <div class="nav-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+      </div>
+      <span class="nav-label">Beranda</span>
+    </button>
+
+    <button class="nav-item" data-tab="tab-absensi">
+      <div class="nav-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="8" y1="6" x2="21" y2="6"></line>
+          <line x1="8" y1="12" x2="21" y2="12"></line>
+          <line x1="8" y1="18" x2="21" y2="18"></line>
+          <line x1="3" y1="6" x2="3.01" y2="6"></line>
+          <line x1="3" y1="12" x2="3.01" y2="12"></line>
+          <line x1="3" y1="18" x2="3.01" y2="18"></line>
+        </svg>
+      </div>
+      <span class="nav-label">Absensi</span>
+    </button>
+
+    <button class="nav-item" data-tab="tab-nilai">
+      <div class="nav-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+          <polyline points="17 6 23 6 23 12"></polyline>
+        </svg>
+      </div>
+      <span class="nav-label">Nilai</span>
+    </button>
+
+    <button class="nav-item" data-tab="tab-pengaturan">
+      <div class="nav-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </div>
+      <span class="nav-label">Pengaturan</span>
+    </button>
+  </nav>
+
+  <!-- MODALS -->
+
+  <!-- Modal Input Nilai Baru -->
+  <div class="modal" id="modal-input-nilai">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Tambah Input Nilai</h3>
+        <button class="close-btn" data-close="modal-input-nilai">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Judul / Jenis Evaluasi</label>
+          <input type="text" id="input-nilai-title" placeholder="contoh: Ulangan, Tugas 1, UTS" value="Ulangan" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>Tanggal</label>
+          <input type="date" id="input-nilai-date" class="form-input">
+        </div>
+        <div class="section-title">Nilai per Siswa</div>
+        <div id="nilai-students-container">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close="modal-input-nilai">Batal</button>
+        <button class="btn btn-primary" id="save-nilai-btn">Simpan Nilai</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Kelola Kelas -->
+  <div class="modal" id="modal-manage-classes">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Kelola Kelas</h3>
+        <button class="close-btn" data-close="modal-manage-classes">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group flex-row">
+          <input type="text" id="new-class-name" placeholder="Tambah Nama Kelas (misal: Kelas XI DKV)" class="form-input">
+          <button class="btn btn-primary" id="add-class-btn">Tambah</button>
+        </div>
+        <div id="class-list-container" class="item-list-container mt-12">
+          <!-- List of classes -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Kelola Siswa -->
+  <div class="modal" id="modal-manage-students">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Kelola Data Siswa</h3>
+        <button class="close-btn" data-close="modal-manage-students">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Nama Siswa Baru</label>
+          <input type="text" id="new-student-name" placeholder="Nama Lengkap Siswa" class="form-input">
+        </div>
+        <div class="form-group flex-row">
+          <input type="text" id="new-student-nis" placeholder="NIS (Opsional)" class="form-input">
+          <button class="btn btn-primary" id="add-student-btn">Tambah Siswa</button>
+        </div>
+        <div id="student-roster-container" class="item-list-container mt-12">
+          <!-- List of students in current class -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="./js/supabase.js"></script>
+  <script src="./js/chart.js"></script>
+  <script src="./js/absensi.js"></script>
+  <script src="./js/nilai.js"></script>
+  <script src="./js/export.js"></script>
+  <script src="./js/pwa.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+</html>
