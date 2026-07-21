@@ -13,6 +13,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Setup Class Dropdown with cloud-restored classes
   setupClassDropdown();
 
+  const dropdown = document.getElementById('class-dropdown');
+  if (dropdown) {
+    dropdown.addEventListener('change', () => {
+      refreshAppViews();
+    });
+  }
+
   // Setup Navigation Tabs
   setupNavigation();
 
@@ -36,6 +43,7 @@ function setupClassDropdown() {
   const dropdown = document.getElementById('class-dropdown');
   if (!dropdown) return;
 
+  const previousSelectedValue = dropdown.value;
   const classes = window.DataStore.getClasses();
   dropdown.innerHTML = '';
 
@@ -46,9 +54,10 @@ function setupClassDropdown() {
     dropdown.appendChild(opt);
   });
 
-  dropdown.addEventListener('change', () => {
-    refreshAppViews();
-  });
+  // Preserve previously selected class if it exists in the list
+  if (previousSelectedValue && classes.some(c => c.id === previousSelectedValue)) {
+    dropdown.value = previousSelectedValue;
+  }
 }
 
 function getCurrentClassId() {
@@ -379,10 +388,15 @@ function setupModals() {
       const nameInput = document.getElementById('new-class-name');
       const name = nameInput.value.trim();
       if (name) {
-        window.DataStore.addClass(name);
+        const newClass = window.DataStore.addClass(name);
         nameInput.value = '';
         setupClassDropdown();
+        if (newClass && newClass.id) {
+          const dropdown = document.getElementById('class-dropdown');
+          if (dropdown) dropdown.value = newClass.id;
+        }
         renderClassListModal();
+        refreshAppViews();
       }
     });
   }
