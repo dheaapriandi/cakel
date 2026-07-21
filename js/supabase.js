@@ -4,6 +4,7 @@ const STORAGE_KEYS = {
   STUDENTS: 'absensi_students_data',
   ATTENDANCE: 'absensi_attendance_data',
   GRADES: 'absensi_grades_data',
+  NOTES: 'absensi_notes_data',
   CONFIG: 'absensi_supabase_config'
 };
 
@@ -217,6 +218,47 @@ const DataStore = {
         .eq('category', category)
         .then(({ error }) => { if (error) console.error('Cloud Delete Grade Error:', error); });
     }
+  },
+  getNotes(classId) {
+    const notes = JSON.parse(localStorage.getItem(STORAGE_KEYS.NOTES)) || [];
+    return classId ? notes.filter(n => n.class_id === classId) : notes;
+  },
+  saveNoteItem(classId, noteData) {
+    let notes = JSON.parse(localStorage.getItem(STORAGE_KEYS.NOTES)) || [];
+    let noteItem = null;
+
+    if (noteData.id) {
+      notes = notes.map(n => {
+        if (n.id === noteData.id) {
+          noteItem = { ...n, ...noteData, class_id: classId };
+          return noteItem;
+        }
+        return n;
+      });
+    }
+
+    if (!noteItem) {
+      noteItem = {
+        id: noteData.id || generateUUID(),
+        class_id: classId,
+        title: noteData.title || 'Catatan Baru',
+        tag: noteData.tag || 'Tugas',
+        content: noteData.content || '',
+        date: noteData.date || new Date().toISOString().split('T')[0]
+      };
+      notes.push(noteItem);
+    }
+
+    localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(notes));
+    this.syncToCloud('notes', noteItem);
+    return noteItem;
+  },
+  deleteNoteItem(noteId) {
+    let notes = JSON.parse(localStorage.getItem(STORAGE_KEYS.NOTES)) || [];
+    notes = notes.filter(n => n.id !== noteId);
+    localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(notes));
+
+    this.deleteFromCloud('notes', noteId);
   },
   async syncToCloud(tableName, payload) {
     if (supabaseClient) {

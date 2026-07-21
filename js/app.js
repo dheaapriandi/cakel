@@ -270,8 +270,94 @@ function updateBerandaSummary(classId) {
 
   // Render Top Students & Class Notes Widgets
   renderTopStudents(classId);
-  setupClassNotes(classId);
+  renderClassNotesList(classId);
 }
+
+function renderClassNotesList(classId) {
+  const container = document.getElementById('notes-list-container');
+  if (!container) return;
+
+  const notes = window.DataStore.getNotes(classId);
+  if (notes.length === 0) {
+    container.innerHTML = `
+      <div class="text-muted p-12 text-center" style="font-size: 13px;">
+        Belum ada catatan. Klik tombol <b>+ Tambah Catatan</b> untuk membuat catatan baru.
+      </div>
+    `;
+    return;
+  }
+
+  const tagColors = {
+    'Tugas': { bg: '#e0f2fe', text: '#0369a1', emoji: '🔵' },
+    'Penting': { bg: '#fee2e2', text: '#b91c1c', emoji: '🔴' },
+    'Pengingat': { bg: '#fef3c7', text: '#b45309', emoji: '🟡' },
+    'Info': { bg: '#dcfce7', text: '#15803d', emoji: '🟢' }
+  };
+
+  let html = '';
+  notes.forEach(note => {
+    const style = tagColors[note.tag] || tagColors['Tugas'];
+    const formattedDate = window.formatDateIndo ? window.formatDateIndo(note.date) : note.date;
+
+    html += `
+      <div class="note-card-item" style="background: #ffffff; border-radius: 12px; padding: 12px 14px; border: 1px solid #e4e4e7; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="background: ${style.bg}; color: ${style.text}; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px;">
+            ${style.emoji} ${note.tag || 'Tugas'}
+          </span>
+          <span style="font-size: 11px; color: #a1a1aa;">${formattedDate}</span>
+        </div>
+        <div style="font-size: 14px; font-weight: 700; color: #18181b; margin-bottom: 4px;">${note.title}</div>
+        <div style="font-size: 13px; color: #52525b; line-height: 1.4; white-space: pre-wrap;">${note.content || '-'}</div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+          <button class="btn-text" style="color: #4f46e5; font-size: 12px; font-weight: 600;" onclick="openEditNoteModal('${note.id}')">✏️ Edit</button>
+          <button class="btn-text" style="color: #ef4444; font-size: 12px; font-weight: 600;" onclick="deleteNoteConfirm('${note.id}')">🗑️ Hapus</button>
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+function openEditNoteModal(noteId) {
+  const classId = getCurrentClassId();
+  const notes = window.DataStore.getNotes(classId);
+  const note = notes.find(n => n.id === noteId);
+
+  const modalTitle = document.getElementById('note-modal-title');
+  const editIdInput = document.getElementById('editing-note-id');
+  const titleInput = document.getElementById('note-title-input');
+  const tagSelect = document.getElementById('note-tag-select');
+  const contentInput = document.getElementById('note-content-input');
+
+  if (note) {
+    if (modalTitle) modalTitle.textContent = 'Edit Catatan';
+    if (editIdInput) editIdInput.value = note.id;
+    if (titleInput) titleInput.value = note.title;
+    if (tagSelect) tagSelect.value = note.tag || 'Tugas';
+    if (contentInput) contentInput.value = note.content || '';
+  } else {
+    if (modalTitle) modalTitle.textContent = 'Tambah Catatan Baru';
+    if (editIdInput) editIdInput.value = '';
+    if (titleInput) titleInput.value = '';
+    if (tagSelect) tagSelect.value = 'Tugas';
+    if (contentInput) contentInput.value = '';
+  }
+
+  const modal = document.getElementById('modal-note-editor');
+  if (modal) modal.classList.add('open');
+}
+
+function deleteNoteConfirm(noteId) {
+  if (confirm('Apakah Anda yakin ingin menghapus catatan ini?')) {
+    window.DataStore.deleteNoteItem(noteId);
+    refreshAppViews();
+  }
+}
+
+window.openEditNoteModal = openEditNoteModal;
+window.deleteNoteConfirm = deleteNoteConfirm;
 
 function renderTopStudents(classId) {
   const container = document.getElementById('top-students-list');
@@ -524,6 +610,34 @@ function setupModals() {
         alert('❌ Gagal menyinkronkan. Periksa koneksi Supabase Anda.');
       }
       batchSyncBtn.textContent = '🔄 Sinkronisasi Batch Semua Data ke Supabase';
+    });
+  }
+
+  // Multi-Notes Listeners
+  const addNoteBtn = document.getElementById('add-note-btn');
+  if (addNoteBtn) {
+    addNoteBtn.addEventListener('click', () => {
+      window.openEditNoteModal(null);
+    });
+  }
+
+  const saveNoteBtn = document.getElementById('save-note-btn');
+  if (saveNoteBtn) {
+    saveNoteBtn.addEventListener('click', () => {
+      const classId = getCurrentClassId();
+      const id = document.getElementById('editing-note-id').value;
+      const title = document.getElementById('note-title-input').value.trim();
+      const tag = document.getElementById('note-tag-select').value;
+      const content = document.getElementById('note-content-input').value.trim();
+
+      if (!title) {
+        alert('Harap isi judul catatan terlebih dahulu.');
+        return;
+      }
+
+      window.DataStore.saveNoteItem(classId, { id, title, tag, content });
+      document.getElementById('modal-note-editor')?.classList.remove('open');
+      refreshAppViews();
     });
   }
 }

@@ -259,12 +259,17 @@
         </div>
       </div>
 
-      <!-- Catatan Ringkas Kelas Card -->
+      <!-- Catatan Ringkas Kelas (Multi-Notes) Card -->
       <div class="card class-notes-card">
-        <div class="card-top-row mb-8">
+        <div class="card-top-row mb-8" style="display: flex; justify-content: space-between; align-items: center;">
           <span class="card-title-bold">📌 Catatan & Pengingat Kelas</span>
+          <button class="btn btn-primary btn-sm" id="add-note-btn" style="padding: 6px 12px; font-size: 12px; border-radius: 8px;">
+            + Tambah Catatan
+          </button>
         </div>
-        <textarea id="class-notes-input" rows="4" class="form-input" placeholder="Tulis agenda, pengingat tugas, atau catatan kelas di sini..." style="resize: vertical; font-size: 13px;"></textarea>
+        <div id="notes-list-container" class="notes-list-grid mt-8">
+          <!-- Populated by JS -->
+        </div>
       </div>
     </section>
 
@@ -534,6 +539,40 @@
         <div id="student-roster-container" class="item-list-container mt-12">
           <!-- List of students in current class -->
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Tambah/Edit Catatan Kelas -->
+  <div class="modal" id="modal-note-editor">
+    <div class="modal-content" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 id="note-modal-title">Tambah Catatan Baru</h3>
+        <button class="close-btn" data-close="modal-note-editor">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editing-note-id" value="">
+        <div class="form-group">
+          <label>Judul Catatan</label>
+          <input type="text" id="note-title-input" placeholder="misal: Tugas Gambar Ilustrasi" class="form-input" required>
+        </div>
+        <div class="form-group mt-12">
+          <label>Kategori / Tag</label>
+          <select id="note-tag-select" class="form-input">
+            <option value="Tugas">🔵 Tugas</option>
+            <option value="Penting">🔴 Penting / Urgen</option>
+            <option value="Pengingat">🟡 Pengingat Ujian</option>
+            <option value="Info">🟢 Informasi Umum</option>
+          </select>
+        </div>
+        <div class="form-group mt-12">
+          <label>Isi Catatan</label>
+          <textarea id="note-content-input" rows="4" class="form-input" placeholder="Tulis rincian catatan di sini..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close="modal-note-editor">Batal</button>
+        <button class="btn btn-primary" id="save-note-btn">Simpan Catatan</button>
       </div>
     </div>
   </div>
