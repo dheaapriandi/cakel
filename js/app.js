@@ -428,6 +428,35 @@ function setupModals() {
       }
     });
   }
+
+  // Batch Import & Sync Listeners
+  const openBatchBtn = document.getElementById('open-batch-import-btn');
+  if (openBatchBtn) {
+    openBatchBtn.addEventListener('click', () => {
+      document.getElementById('modal-batch-import')?.classList.add('open');
+    });
+  }
+
+  const processBatchBtn = document.getElementById('process-batch-import-btn');
+  if (processBatchBtn) {
+    processBatchBtn.addEventListener('click', () => {
+      window.processBatchStudentImport(getCurrentClassId());
+    });
+  }
+
+  const batchSyncBtn = document.getElementById('batch-cloud-sync-btn');
+  if (batchSyncBtn) {
+    batchSyncBtn.addEventListener('click', async () => {
+      batchSyncBtn.textContent = '⏳ Menyinkronkan...';
+      const success = await window.DataStore.syncAllToCloudBatch();
+      if (success) {
+        alert('✅ Berhasil menyinkronkan seluruh data batch ke Supabase!');
+      } else {
+        alert('❌ Gagal menyinkronkan. Periksa koneksi Supabase Anda.');
+      }
+      batchSyncBtn.textContent = '🔄 Sinkronisasi Batch Semua Data ke Supabase';
+    });
+  }
 }
 
 function renderClassListModal() {

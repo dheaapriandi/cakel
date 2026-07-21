@@ -265,6 +265,25 @@ const DataStore = {
       console.error('Cloud Sync Pull Error:', err);
       return false;
     }
+  },
+  async syncAllToCloudBatch() {
+    if (!supabaseClient) return false;
+    try {
+      const classes = this.getClasses();
+      const students = this.getStudents();
+      const attendance = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) || [];
+      const grades = JSON.parse(localStorage.getItem(STORAGE_KEYS.GRADES)) || [];
+
+      if (classes.length > 0) await supabaseClient.from('classes').upsert(classes);
+      if (students.length > 0) await supabaseClient.from('students').upsert(students);
+      if (attendance.length > 0) await supabaseClient.from('attendance').upsert(attendance);
+      if (grades.length > 0) await supabaseClient.from('grades').upsert(grades);
+
+      return true;
+    } catch (err) {
+      console.error('Batch Sync Error:', err);
+      return false;
+    }
   }
 };
 

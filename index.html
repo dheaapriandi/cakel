@@ -212,6 +212,17 @@
       </div>
 
       <div class="card setting-card">
+        <h3>Impor & Update Data Batch</h3>
+        <p class="text-muted">Impor puluhan data siswa sekaligus dari file Excel/CSV atau tempel teks.</p>
+        <button class="btn btn-primary mt-12 btn-block" id="open-batch-import-btn">
+          📥 Impor Batch Siswa (Excel / CSV)
+        </button>
+        <button class="btn btn-outline mt-8 btn-block" id="batch-cloud-sync-btn">
+          🔄 Sinkronisasi Batch Semua Data ke Supabase
+        </button>
+      </div>
+
+      <div class="card setting-card">
         <h3>Kelola Kelas & Siswa</h3>
         <div class="btn-group-vertical">
           <button class="btn btn-outline" id="manage-classes-btn">🏫 Kelola Daftar Kelas</button>
@@ -331,6 +342,31 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" data-close="modal-input-nilai">Batal</button>
         <button class="btn btn-primary" id="save-nilai-btn">Simpan Nilai</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Impor Batch Siswa -->
+  <div class="modal" id="modal-batch-import">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Impor Batch Data Siswa</h3>
+        <button class="close-btn" data-close="modal-batch-import">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted mb-8">Pilih file Excel (.xlsx / .csv) atau tempelkan teks daftar nama siswa per baris (format: <code>Nama Siswa, NIS</code>):</p>
+        
+        <div class="form-group">
+          <label>Unggah File Excel / CSV</label>
+          <input type="file" id="batch-file-input" accept=".xlsx, .xls, .csv" class="form-input">
+        </div>
+
+        <div class="section-title mt-12">Atau Salin & Tempel Daftar Siswa</div>
+        <textarea id="batch-text-input" rows="6" class="form-input" placeholder="Ahmad Rizky, 1001&#10;Budi Santoso, 1002&#10;Citra Dewi, 1003" style="font-family: monospace; font-size: 13px;"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close="modal-batch-import">Batal</button>
+        <button class="btn btn-primary" id="process-batch-import-btn">Proses Impor Batch</button>
       </div>
     </div>
   </div>

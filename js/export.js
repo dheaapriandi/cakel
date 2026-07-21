@@ -133,3 +133,79 @@ function exportToCSVFallback(currentClass, students, attendance, grades, formatt
 }
 
 window.exportDataToExcel = exportDataToExcel;
+
+function processBatchStudentImport(classId) {
+  const fileInputEl = document.getElementById('batch-file-input');
+  const textInputEl = document.getElementById('batch-text-input');
+  const studentsToInsert = [];
+
+  // Parse Text Input
+  const rawText = textInputEl ? textInputEl.value.trim() : '';
+  if (rawText) {
+    const lines = rawText.split('\n');
+    lines.forEach(line => {
+      if (line.trim()) {
+        const parts = line.split(',');
+        const name = parts[0].trim();
+        const nis = parts[1] ? parts[1].trim() : '';
+        if (name) {
+          studentsToInsert.push({ name, nis });
+        }
+      }
+    });
+  }
+
+  // Parse Excel / File Input if provided
+  const file = fileInputEl && fileInputEl.files ? fileInputEl.files[0] : null;
+  if (file && typeof XLSX !== 'undefined') {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[firstSheetName];
+        const jsonRows = XLSX.utils.sheet_to_json(sheet);
+
+        jsonRows.forEach(row => {
+          const name = row['Nama Siswa'] || row['Nama'] || row['name'] || row['nama'] || Object.values(row)[0];
+          const nis = row['NIS'] || row['nis'] || Object.values(row)[1] || '';
+          if (name && typeof name === 'string' && name.trim()) {
+            studentsToInsert.push({ name: name.trim(), nis: String(nis).trim() });
+          }
+        });
+
+        saveBatchStudents(classId, studentsToInsert);
+      } catch (err) {
+        alert('Gagal membaca file Excel: ' + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  } else if (studentsToInsert.length > 0) {
+    saveBatchStudents(classId, studentsToInsert);
+  } else {
+    alert('Harap unggah file Excel/CSV atau tempelkan teks daftar nama siswa.');
+  }
+}
+
+function saveBatchStudents(classId, studentsArray) {
+  if (studentsArray.length === 0) return;
+
+  let addedCount = 0;
+  studentsArray.forEach(item => {
+    window.DataStore.addStudent(classId, item.name, item.nis);
+    addedCount++;
+  });
+
+  alert(`✅ Berhasil mengimpor ${addedCount} data siswa secara batch!`);
+  
+  const fileInputEl = document.getElementById('batch-file-input');
+  const textInputEl = document.getElementById('batch-text-input');
+  if (fileInputEl) fileInputEl.value = '';
+  if (textInputEl) textInputEl.value = '';
+
+  document.getElementById('modal-batch-import')?.classList.remove('open');
+  if (window.refreshAppViews) window.refreshAppViews();
+}
+
+window.processBatchStudentImport = processBatchStudentImport;
