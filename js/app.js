@@ -263,10 +263,71 @@ function updateBerandaSummary(classId) {
     document.getElementById('last-grade-date').textContent = window.formatDateIndo(lastGrade.date);
     document.getElementById('last-grade-title').textContent = lastGrade.category || 'Ulangan';
     document.getElementById('last-grade-students').textContent = `${scores.length}/${totalStudents}`;
-    document.getElementById('last-grade-avg').textContent = avg;
+    document.getElementById('last-grade-avg').textContent = Math.round(avg);
     document.getElementById('last-grade-max').textContent = max;
     document.getElementById('last-grade-min').textContent = min;
   }
+
+  // Render Top Students & Class Notes Widgets
+  renderTopStudents(classId);
+  setupClassNotes(classId);
+}
+
+function renderTopStudents(classId) {
+  const container = document.getElementById('top-students-list');
+  if (!container) return;
+
+  const students = window.DataStore.getStudents(classId);
+  const grades = window.DataStore.getGrades(classId);
+
+  if (students.length === 0 || grades.length === 0) {
+    container.innerHTML = '<div class="text-muted p-12 text-center" style="font-size:13px;">Belum ada data nilai siswa.</div>';
+    return;
+  }
+
+  const studentAvgMap = [];
+  students.forEach(s => {
+    const sGrades = grades.filter(g => g.student_id === s.id);
+    if (sGrades.length > 0) {
+      const avg = sGrades.reduce((sum, g) => sum + (Number(g.score) || 0), 0) / sGrades.length;
+      studentAvgMap.push({ name: s.name, avg: Math.round(avg) });
+    }
+  });
+
+  studentAvgMap.sort((a, b) => b.avg - a.avg);
+
+  if (studentAvgMap.length === 0) {
+    container.innerHTML = '<div class="text-muted p-12 text-center" style="font-size:13px;">Belum ada data nilai siswa.</div>';
+    return;
+  }
+
+  const medals = ['🥇', '🥈', '🥉'];
+  let html = '';
+  studentAvgMap.slice(0, 4).forEach((s, idx) => {
+    html += `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f4f4f5;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span>${medals[idx] || (idx + 1) + '.'}</span>
+          <span style="font-size: 14px; font-weight: 600; color: #18181b;">${s.name}</span>
+        </div>
+        <span style="font-size: 14px; font-weight: 700; color: #10b981;">${s.avg}</span>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+function setupClassNotes(classId) {
+  const textarea = document.getElementById('class-notes-input');
+  if (!textarea) return;
+
+  const key = `cakel_notes_${classId || 'default'}`;
+  textarea.value = localStorage.getItem(key) || '';
+
+  textarea.oninput = function() {
+    localStorage.setItem(key, textarea.value);
+  };
 }
 
 function setupHeaderMenu() {
