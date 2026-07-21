@@ -69,16 +69,21 @@ function getCurrentClassId() {
 }
 
 function setupNavigation() {
-  const navItems = document.querySelectorAll('.bottom-nav .nav-item');
+  const navItems = document.querySelectorAll('.nav-item');
   const pageTitle = document.getElementById('page-title');
 
   navItems.forEach(item => {
     item.addEventListener('click', () => {
       const targetTabId = item.getAttribute('data-tab');
 
-      // Update nav active state
-      navItems.forEach(n => n.classList.remove('active'));
-      item.classList.add('active');
+      // Update active state across all navigation elements
+      navItems.forEach(n => {
+        if (n.getAttribute('data-tab') === targetTabId) {
+          n.classList.add('active');
+        } else {
+          n.classList.remove('active');
+        }
+      });
 
       // Hide all tabs & show target
       document.querySelectorAll('.tab-page').forEach(page => {
@@ -87,7 +92,7 @@ function setupNavigation() {
       const targetPage = document.getElementById(targetTabId);
       if (targetPage) targetPage.classList.add('active');
 
-      // Update Title
+      // Update Sub-Title
       if (targetTabId === 'tab-beranda') pageTitle.textContent = 'Beranda';
       if (targetTabId === 'tab-absensi') pageTitle.textContent = 'Absensi';
       if (targetTabId === 'tab-nilai') pageTitle.textContent = 'Nilai';
