@@ -51,7 +51,6 @@ function saveSupabaseConfig(url, key) {
 // Initial Seed Data with valid UUIDs and auto-sync to cloud
 function loadInitialSeedData() {
   const defaultClass = { id: 'a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d', name: 'Kelas X DKV' };
-  const defaultStudent = { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d4e5', class_id: 'a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d', name: 'Ahmad Rizky', nis: '1001' };
 
   let classes = JSON.parse(localStorage.getItem(STORAGE_KEYS.CLASSES));
   if (!classes || classes.length === 0) {
@@ -63,12 +62,12 @@ function loadInitialSeedData() {
   }
 
   let students = JSON.parse(localStorage.getItem(STORAGE_KEYS.STUDENTS));
-  if (!students || students.length === 0) {
-    students = [defaultStudent];
+  if (!students) {
+    localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify([]));
+  } else {
+    // Strip dummy Ahmad Rizky if present
+    students = students.filter(s => s.id !== 'f47ac10b-58cc-4372-a567-0e02b2c3d4e5' && s.name !== 'Ahmad Rizky');
     localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
-    if (window.DataStore && window.DataStore.syncToCloud) {
-      window.DataStore.syncToCloud('students', defaultStudent);
-    }
   }
 
   let attendance = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE));
@@ -322,10 +321,17 @@ const DataStore = {
       // Smart Merge Students
       const { data: cloudStudents, error: errStd } = await supabaseClient.from('students').select('*');
       if (!errStd && cloudStudents) {
-        const localStudents = JSON.parse(localStorage.getItem(STORAGE_KEYS.STUDENTS)) || [];
+        // Purge dummy Ahmad Rizky from cloud if present
+        if (cloudStudents.some(s => s.id === 'f47ac10b-58cc-4372-a567-0e02b2c3d4e5' || s.name === 'Ahmad Rizky')) {
+          this.deleteFromCloud('students', 'f47ac10b-58cc-4372-a567-0e02b2c3d4e5');
+        }
+
+        const validCloudStudents = cloudStudents.filter(s => s.id !== 'f47ac10b-58cc-4372-a567-0e02b2c3d4e5' && s.name !== 'Ahmad Rizky');
+        const localStudents = (JSON.parse(localStorage.getItem(STORAGE_KEYS.STUDENTS)) || []).filter(s => s.id !== 'f47ac10b-58cc-4372-a567-0e02b2c3d4e5' && s.name !== 'Ahmad Rizky');
+
         const stdMap = new Map();
         localStudents.forEach(s => stdMap.set(s.id, s));
-        cloudStudents.forEach(s => stdMap.set(s.id, s));
+        validCloudStudents.forEach(s => stdMap.set(s.id, s));
 
         const mergedStudents = Array.from(stdMap.values());
         mergedStudents.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'id', { sensitivity: 'base' }));
