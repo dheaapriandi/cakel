@@ -183,24 +183,31 @@ function updateBerandaSummary(classId) {
   // Render 6-Month Chart
   window.renderAttendanceChart('attendance-chart');
 
-  // Attendance for Today
+  // Attendance for Today - deduplicated per student
   const todayStr = new Date().toISOString().split('T')[0];
-  const todayAttendance = window.DataStore.getAttendance(classId, todayStr);
+  const allTodayAttendance = window.DataStore.getAttendance(classId, todayStr);
+
+  const studentAttMap = new Map();
+  allTodayAttendance.forEach(a => {
+    studentAttMap.set(a.student_id, a.status);
+  });
 
   let hadir = 0, izin = 0, sakit = 0, alpa = 0;
-  if (todayAttendance.length > 0) {
-    hadir = todayAttendance.filter(a => a.status === 'Hadir').length;
-    izin = todayAttendance.filter(a => a.status === 'Izin').length;
-    sakit = todayAttendance.filter(a => a.status === 'Sakit').length;
-    alpa = todayAttendance.filter(a => a.status === 'Alpa').length;
+  if (studentAttMap.size > 0) {
+    studentAttMap.forEach(status => {
+      if (status === 'Hadir') hadir++;
+      else if (status === 'Izin') izin++;
+      else if (status === 'Sakit') sakit++;
+      else if (status === 'Alpa') alpa++;
+    });
   } else {
-    // Demo values if no attendance entered today
+    // Default fallback if no attendance recorded today yet
     hadir = totalStudents;
   }
 
-  const todayPercentage = Math.round((hadir / totalStudents) * 100);
+  const todayPercentage = Math.min(100, Math.round((hadir / totalStudents) * 100));
   document.getElementById('today-percentage').textContent = `${todayPercentage}%`;
-  document.getElementById('today-fraction').textContent = `${hadir} / ${totalStudents}`;
+  document.getElementById('today-fraction').textContent = `${Math.min(hadir, totalStudents)} / ${totalStudents}`;
 
   document.getElementById('count-hadir').textContent = hadir;
   document.getElementById('count-izin').textContent = izin;
