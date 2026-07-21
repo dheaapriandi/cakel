@@ -601,27 +601,34 @@ body {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 10px;
+  gap: 12px;
 }
 .fab {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 50% !important;
   border: none;
   color: white;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
   cursor: pointer;
-  transition: transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
   box-sizing: border-box;
+  padding: 0 !important;
 }
 .fab svg {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
 }
 .fab:active {
-  transform: scale(0.94);
+  transform: scale(0.92);
+}
+.fab:hover {
+  transform: scale(1.06);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
 }
 .fab-excel {
   background-color: var(--btn-green);
@@ -630,41 +637,20 @@ body {
   background-color: var(--btn-black);
 }
 .fab-text {
-  font-size: 13.5px;
-  font-weight: 600;
-  white-space: nowrap;
+  display: none !important;
 }
 
 @media (max-width: 768px) {
   .fab-container {
     bottom: calc(76px + env(safe-area-inset-bottom, 0px));
-    right: 16px;
-  }
-  .fab {
-    width: 48px;
-    height: 48px;
-    border-radius: 16px;
-    padding: 0;
-  }
-  .fab-text {
-    display: none;
+    right: 20px;
   }
 }
 
 @media (min-width: 769px) {
   .fab-container {
-    bottom: 28px !important;
-    right: 28px !important;
-  }
-  .fab {
-    height: 44px;
-    min-width: 145px;
-    padding: 0 18px;
-    border-radius: 22px;
-  }
-  .fab:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+    bottom: 36px !important;
+    right: 36px !important;
   }
 }
 
