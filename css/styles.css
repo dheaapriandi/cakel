@@ -110,24 +110,32 @@ body {
   .sidebar-nav {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
   }
   .sidebar-item {
     display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: flex-start;
+    gap: 14px;
     padding: 12px 16px;
-    border-radius: 12px;
+    border-radius: 14px;
     border: none;
     background: transparent;
     color: var(--text-secondary);
     font-family: inherit;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
     cursor: pointer;
     text-align: left;
     transition: all 0.15s ease;
     width: 100%;
+    height: auto;
+  }
+  .sidebar-item svg {
+    width: 22px;
+    height: 22px;
+    stroke: currentColor;
+    flex-shrink: 0;
   }
   .sidebar-item:hover {
     background: #f4f4f5;
@@ -136,6 +144,7 @@ body {
   .sidebar-item.active {
     background: #18181b;
     color: #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   }
   .sidebar-item.active svg {
     stroke: #ffffff;

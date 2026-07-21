@@ -69,7 +69,7 @@ function getCurrentClassId() {
 }
 
 function setupNavigation() {
-  const navItems = document.querySelectorAll('.nav-item');
+  const navItems = document.querySelectorAll('.bottom-nav .nav-item, .sidebar-nav .sidebar-item');
   const pageTitle = document.getElementById('page-title');
 
   navItems.forEach(item => {
