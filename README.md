@@ -1,4 +1,4 @@
-# 📱 Aplikasi Absensi & Nilai Siswa (PWA + Supabase + Vercel)
+# 📱 Cakel - Catatan Kelas (PWA + Supabase + Vercel)
 
 Aplikasi manajemen absensi dan nilai siswa berbasis Web Mobile (PWA) dengan desain antarmuka modern yang disesuaikan secara presisi dengan screenshot tampilan Android.
 

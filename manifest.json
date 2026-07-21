@@ -1,7 +1,7 @@
 {
-  "name": "Cakel - Absensi & Nilai",
+  "name": "Cakel - Catatan Kelas",
   "short_name": "Cakel",
-  "description": "Cakel - Aplikasi Catatan Kehadiran & Nilai Siswa",
+  "description": "Cakel - Aplikasi Catatan Kelas, Absensi & Nilai Siswa",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f8f9fa",
