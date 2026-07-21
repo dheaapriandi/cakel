@@ -163,7 +163,9 @@ const DataStore = {
     return records.filter(r => {
       const matchClass = !classId || r.class_id === classId;
       const matchDate = !date || r.date === date;
-      const matchSem = !semester || !r.semester || String(r.semester) === String(semester);
+      // If date is specified (loading attendance sheet), load by date regardless of semester!
+      // If date is null (loading semester history), include matching semester or legacy records without semester!
+      const matchSem = date ? true : (!semester || !r.semester || String(r.semester) === String(semester));
       return matchClass && matchDate && matchSem;
     });
   },
