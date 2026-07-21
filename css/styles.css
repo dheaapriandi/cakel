@@ -650,7 +650,7 @@ body {
 @media (min-width: 769px) {
   .fab-container {
     bottom: 36px !important;
-    right: 36px !important;
+    right: 80px !important;
   }
 }
 
