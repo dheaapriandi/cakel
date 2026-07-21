@@ -119,8 +119,8 @@ function renderAbsensiHistory(classId) {
     html += `
       <div class="card last-entry-card mb-12">
         <div class="card-top-row">
-          <span class="card-title-bold">Absensi</span>
-          <span class="card-date-light">${formattedDate} ${items[0] && items[0].time ? ', ' + items[0].time : ''}</span>
+          <span class="card-title-bold">${formattedDate} ${items[0] && items[0].time ? ', ' + items[0].time : ''}</span>
+          <button class="btn-text" style="color: #ef4444; font-size: 13px; font-weight: 600;" onclick="deleteAttendanceByDateConfirm('${classId}', '${dateStr}')">🗑️ Hapus</button>
         </div>
         <div class="big-fraction-value">${hadir}/${total}</div>
         <div class="status-grid mini">
@@ -135,6 +135,17 @@ function renderAbsensiHistory(classId) {
 
   container.innerHTML = html;
 }
+
+function deleteAttendanceByDateConfirm(classId, dateStr) {
+  const formattedDate = formatDateIndo(dateStr);
+  if (confirm(`Apakah Anda yakin ingin menghapus data absensi tanggal ${formattedDate}?`)) {
+    window.DataStore.removeAttendanceByDate(classId, dateStr);
+    renderAbsensiTab(classId);
+    if (window.refreshAppViews) window.refreshAppViews();
+  }
+}
+
+window.deleteAttendanceByDateConfirm = deleteAttendanceByDateConfirm;
 
 function formatDateIndo(dateStr) {
   if (!dateStr) return '';

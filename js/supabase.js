@@ -146,6 +146,16 @@ const DataStore = {
 
     this.deleteFromCloud('students', id);
   },
+  removeAttendanceByDate(classId, date) {
+    let records = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) || [];
+    records = records.filter(r => !(r.class_id === classId && r.date === date));
+    localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(records));
+
+    if (supabaseClient) {
+      supabaseClient.from('attendance').delete().eq('class_id', classId).eq('date', date)
+        .then(({ error }) => { if (error) console.error('Cloud Delete Attendance Error:', error); });
+    }
+  },
   getAttendance(classId, date) {
     const records = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) || [];
     return records.filter(r => r.class_id === classId && (!date || r.date === date));
