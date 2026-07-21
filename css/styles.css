@@ -227,13 +227,16 @@ body {
 /* LOGIN OVERLAY & CARD */
 .login-overlay {
   position: fixed;
-  top: 0; left: 0; width: 100%; height: 100%;
+  top: 0; left: 0; right: 0; bottom: 0;
+  width: 100vw; height: 100dvh;
   background: var(--bg-color);
-  z-index: 9999;
+  z-index: 99999;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
+  touch-action: manipulation;
+  pointer-events: auto;
 }
 .login-card {
   background: white;
@@ -243,6 +246,9 @@ body {
   padding: 32px 24px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.08);
   border: 1px solid rgba(0,0,0,0.05);
+  position: relative;
+  z-index: 100000;
+  pointer-events: auto;
 }
 .login-header {
   text-align: center;
@@ -736,9 +742,15 @@ body {
   border-radius: var(--radius-btn);
   padding: 10px 14px;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 16px; /* 16px prevents iOS Safari auto-zoom & focus blockage */
   background: white;
   width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: manipulation;
+  pointer-events: auto;
+  user-select: auto;
+  -webkit-user-select: auto;
 }
 .btn {
   border: none;

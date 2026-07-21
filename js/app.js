@@ -664,15 +664,10 @@ function setupModals() {
 }
 
 function setupAuthSystem() {
-  const AUTH_KEY = 'absensi_auth_credentials';
   const SESSION_KEY = 'absensi_session_logged_in';
 
-  // Get or set default credentials
-  let credentials = JSON.parse(localStorage.getItem(AUTH_KEY));
-  if (!credentials || !credentials.username || !credentials.password) {
-    credentials = { username: 'admin', password: 'admin' };
-    localStorage.setItem(AUTH_KEY, JSON.stringify(credentials));
-  }
+  // Get current credentials
+  const getCreds = () => window.DataStore ? window.DataStore.getAdminCredentials() : (JSON.parse(localStorage.getItem('absensi_auth_credentials')) || { username: 'admin', password: 'admin' });
 
   const loginScreen = document.getElementById('login-screen');
   const loginForm = document.getElementById('login-form');
@@ -695,7 +690,7 @@ function setupAuthSystem() {
       const uInput = document.getElementById('login-username').value.trim();
       const pInput = document.getElementById('login-password').value.trim();
 
-      const currentCreds = JSON.parse(localStorage.getItem(AUTH_KEY)) || { username: 'admin', password: 'admin' };
+      const currentCreds = getCreds();
 
       if (uInput === currentCreds.username && pInput === currentCreds.password) {
         localStorage.setItem(SESSION_KEY, 'true');
@@ -713,22 +708,26 @@ function setupAuthSystem() {
 
   // Settings Tab Auth Config Form
   const cfgU = document.getElementById('cfg-auth-username');
-  const cfgP = document.getElementById('cfg-auth-password');
-  if (cfgU) cfgU.value = credentials.username;
+  const currentCreds = getCreds();
+  if (cfgU) cfgU.value = currentCreds.username;
 
   const saveAuthBtn = document.getElementById('save-auth-config');
   const authStatus = document.getElementById('auth-status');
 
   if (saveAuthBtn) {
-    saveAuthBtn.addEventListener('click', () => {
+    saveAuthBtn.addEventListener('click', async () => {
       const newU = document.getElementById('cfg-auth-username').value.trim();
       const newP = document.getElementById('cfg-auth-password').value.trim();
 
       if (newU && newP) {
-        localStorage.setItem(AUTH_KEY, JSON.stringify({ username: newU, password: newP }));
+        if (window.DataStore && window.DataStore.saveAdminCredentials) {
+          await window.DataStore.saveAdminCredentials(newU, newP);
+        } else {
+          localStorage.setItem('absensi_auth_credentials', JSON.stringify({ username: newU, password: newP }));
+        }
         if (authStatus) {
           authStatus.style.color = '#22c55e';
-          authStatus.textContent = '✅ Akun Admin berhasil diperbarui!';
+          authStatus.textContent = '✅ Akun Admin berhasil diperbarui & disinkronkan ke Cloud!';
         }
       } else {
         if (authStatus) {

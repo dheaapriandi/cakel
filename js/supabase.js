@@ -5,6 +5,7 @@ const STORAGE_KEYS = {
   ATTENDANCE: 'absensi_attendance_data',
   GRADES: 'absensi_grades_data',
   NOTES: 'absensi_notes_data',
+  AUTH: 'absensi_auth_credentials',
   CONFIG: 'absensi_supabase_config'
 };
 
@@ -272,9 +273,27 @@ const DataStore = {
   deleteNoteItem(noteId) {
     let notes = JSON.parse(localStorage.getItem(STORAGE_KEYS.NOTES)) || [];
     notes = notes.filter(n => n.id !== noteId);
-    localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(notes));
-
     this.deleteFromCloud('notes', noteId);
+  },
+  getAdminCredentials() {
+    const creds = localStorage.getItem(STORAGE_KEYS.AUTH);
+    return creds ? JSON.parse(creds) : { username: 'admin', password: 'admin' };
+  },
+  async saveAdminCredentials(username, password) {
+    const creds = { username, password };
+    localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(creds));
+
+    if (supabaseClient) {
+      try {
+        const { error } = await supabaseClient.from('app_settings').upsert([
+          { key: 'admin_credentials', value: JSON.stringify(creds) }
+        ]);
+        if (error) console.error("Cloud Auth Save Error:", error);
+      } catch (err) {
+        console.error("Cloud Auth Save Exception:", err);
+      }
+    }
+    return creds;
   },
   async syncToCloud(tableName, payload) {
     if (supabaseClient) {
@@ -364,6 +383,19 @@ const DataStore = {
         cloudGrades.forEach(g => grdMap.set(g.id, g));
 
         localStorage.setItem(STORAGE_KEYS.GRADES, JSON.stringify(Array.from(grdMap.values())));
+      }
+
+      // Sync Admin Credentials from Cloud app_settings
+      try {
+        const { data: cloudAuth } = await supabaseClient.from('app_settings').select('*').eq('key', 'admin_credentials');
+        if (cloudAuth && cloudAuth.length > 0 && cloudAuth[0].value) {
+          const parsed = typeof cloudAuth[0].value === 'string' ? JSON.parse(cloudAuth[0].value) : cloudAuth[0].value;
+          if (parsed && parsed.username && parsed.password) {
+            localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(parsed));
+          }
+        }
+      } catch (e) {
+        console.warn("Cloud Auth Sync Warning:", e);
       }
 
       return true;
