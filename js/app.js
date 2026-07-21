@@ -15,6 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Setup Modal Listeners
   setupModals();
 
+  // Setup Header Dropdown Menu
+  setupHeaderMenu();
+
   // Setup FAB Buttons
   setupFABs();
 
@@ -164,6 +167,51 @@ function updateBerandaSummary(classId) {
     document.getElementById('last-grade-avg').textContent = avg;
     document.getElementById('last-grade-max').textContent = max;
     document.getElementById('last-grade-min').textContent = min;
+  }
+}
+
+function setupHeaderMenu() {
+  const menuBtn = document.getElementById('header-menu-btn');
+  const dropdown = document.getElementById('header-dropdown-menu');
+
+  if (menuBtn && dropdown) {
+    menuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.classList.toggle('active');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!dropdown.contains(e.target) && e.target !== menuBtn) {
+        dropdown.classList.remove('active');
+      }
+    });
+
+    document.getElementById('menu-opt-classes')?.addEventListener('click', () => {
+      dropdown.classList.remove('active');
+      renderClassListModal();
+      document.getElementById('modal-manage-classes').classList.add('open');
+    });
+
+    document.getElementById('menu-opt-students')?.addEventListener('click', () => {
+      dropdown.classList.remove('active');
+      renderStudentListModal();
+      document.getElementById('modal-manage-students').classList.add('open');
+    });
+
+    document.getElementById('menu-opt-export')?.addEventListener('click', () => {
+      dropdown.classList.remove('active');
+      window.exportDataToExcel(getCurrentClassId());
+    });
+
+    document.getElementById('menu-opt-settings')?.addEventListener('click', () => {
+      dropdown.classList.remove('active');
+      document.querySelector('[data-tab="tab-pengaturan"]')?.click();
+    });
+
+    document.getElementById('menu-opt-install')?.addEventListener('click', () => {
+      dropdown.classList.remove('active');
+      document.getElementById('install-pwa-btn')?.click();
+    });
   }
 }
 

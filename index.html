@@ -32,12 +32,22 @@
   <!-- App Header -->
   <header class="app-header">
     <h1 id="page-title" class="page-title">Beranda</h1>
-    <div class="header-actions">
+    <div class="header-actions" style="position: relative;">
       <button class="icon-btn menu-btn" id="header-menu-btn" title="Menu Options">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
         </svg>
       </button>
+
+      <!-- Options Dropdown Menu -->
+      <div class="header-dropdown-menu" id="header-dropdown-menu">
+        <button class="dropdown-item" id="menu-opt-classes">🏫 Kelola Kelas</button>
+        <button class="dropdown-item" id="menu-opt-students">👨‍🎓 Kelola Data Siswa</button>
+        <button class="dropdown-item" id="menu-opt-export">📊 Ekspor Ke Excel</button>
+        <div class="dropdown-divider"></div>
+        <button class="dropdown-item" id="menu-opt-settings">⚙️ Pengaturan & Cloud</button>
+        <button class="dropdown-item" id="menu-opt-install">📱 Install Aplikasi (APK)</button>
+      </div>
     </div>
   </header>
 
