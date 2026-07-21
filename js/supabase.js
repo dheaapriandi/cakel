@@ -26,7 +26,10 @@ function initSupabase() {
 
 function getSupabaseConfig() {
   const cfg = localStorage.getItem(STORAGE_KEYS.CONFIG);
-  return cfg ? JSON.parse(cfg) : { url: '', key: '' };
+  return cfg ? JSON.parse(cfg) : { 
+    url: 'https://ooxiicfixtvucfshesal.supabase.co', 
+    key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9veGlpY2ZpeHR2dWNmc2hlc2FsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ2MDEyMjgsImV4cCI6MjEwMDE3NzIyOH0.DGTWrRay9k7q2U6o8Mz2W6j8t8dEe2e9q0kv3yXa3aI' 
+  };
 }
 
 function saveSupabaseConfig(url, key) {
