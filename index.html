@@ -34,9 +34,41 @@
 </head>
 <body>
 
+  <!-- LOGIN SCREEN OVERLAY -->
+  <div id="login-screen" class="login-overlay">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="login-logo">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 3L1 9l11 6l9-4.91V17h2V9L12 3zm0 2.53L18.74 9 12 12.67 5.26 9 12 5.53zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
+          </svg>
+        </div>
+        <h1 class="login-title">Cakel</h1>
+        <p class="login-subtitle">Catatan Kelas & Absensi Siswa</p>
+      </div>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="login-username" class="form-input" placeholder="admin" required autocomplete="username">
+        </div>
+        <div class="form-group mt-12">
+          <label>Password</label>
+          <input type="password" id="login-password" class="form-input" placeholder="admin" required autocomplete="current-password">
+        </div>
+        <div id="login-error-msg" class="status-msg text-alpa mt-8" style="display:none;"></div>
+        <button type="submit" class="btn btn-primary btn-block mt-16">🔑 Masuk ke Aplikasi</button>
+      </form>
+      <div class="text-muted text-center mt-12" style="font-size: 11px;">Default Login: username <b>admin</b> | password <b>admin</b></div>
+    </div>
+  </div>
+
   <!-- App Header -->
   <header class="app-header">
-    <h1 id="page-title" class="page-title">Beranda</h1>
+    <div class="header-brand-title">
+      <span class="app-brand-name">Cakel</span>
+      <span id="page-title" class="page-title-sub">Beranda</span>
+    </div>
     <div class="header-actions" style="position: relative;">
       <button class="icon-btn menu-btn" id="header-menu-btn" title="Menu Options">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
@@ -207,6 +239,24 @@
 
     <!-- TAB 4: PENGATURAN -->
     <section id="tab-pengaturan" class="tab-page">
+      <div class="card setting-card">
+        <h3>Keamanan & Akun Admin</h3>
+        <p class="text-muted">Ubah Username & Password untuk mengunci aplikasi Cakel.</p>
+        <div class="form-group mt-12">
+          <label>Username Admin Baru</label>
+          <input type="text" id="cfg-auth-username" placeholder="admin" class="form-input">
+        </div>
+        <div class="form-group mt-8">
+          <label>Password Admin Baru</label>
+          <input type="password" id="cfg-auth-password" placeholder="••••••••" class="form-input">
+        </div>
+        <button class="btn btn-primary mt-12" id="save-auth-config">Simpan Akun</button>
+        <button class="btn btn-secondary mt-8 btn-block" id="app-logout-btn" style="color: #ef4444; font-weight: 700;">
+          🚪 Keluar / Log Out
+        </button>
+        <div id="auth-status" class="status-msg mt-8"></div>
+      </div>
+
       <div class="card setting-card">
         <h3>PWA & Install Aplikasi</h3>
         <p class="text-muted">Install aplikasi ini di Android Anda tanpa compile APK!</p>

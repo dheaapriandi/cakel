@@ -62,11 +62,69 @@ body {
   flex-shrink: 0;
 }
 
-.page-title {
+.header-brand-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.app-brand-name {
   font-size: clamp(20px, 5vw, 24px);
-  font-weight: 700;
+  font-weight: 800;
   color: var(--text-primary);
-  letter-spacing: -0.3px;
+  letter-spacing: -0.5px;
+}
+.page-title-sub {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* LOGIN OVERLAY & CARD */
+.login-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: var(--bg-color);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.login-card {
+  background: white;
+  width: 100%;
+  max-width: 380px;
+  border-radius: 24px;
+  padding: 32px 24px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  border: 1px solid rgba(0,0,0,0.05);
+}
+.login-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+.login-logo {
+  width: 64px;
+  height: 64px;
+  background: #18181b;
+  color: white;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+}
+.login-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+}
+.login-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 2px;
 }
 
 .header-actions {

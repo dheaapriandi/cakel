@@ -10,6 +10,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     await window.DataStore.fetchFromCloud();
   }
 
+  // Setup Auth System
+  setupAuthSystem();
+
   // Setup Class Dropdown with cloud-restored classes
   setupClassDropdown();
 
@@ -455,6 +458,93 @@ function setupModals() {
         alert('❌ Gagal menyinkronkan. Periksa koneksi Supabase Anda.');
       }
       batchSyncBtn.textContent = '🔄 Sinkronisasi Batch Semua Data ke Supabase';
+    });
+  }
+}
+
+function setupAuthSystem() {
+  const AUTH_KEY = 'absensi_auth_credentials';
+  const SESSION_KEY = 'absensi_session_logged_in';
+
+  // Get or set default credentials
+  let credentials = JSON.parse(localStorage.getItem(AUTH_KEY));
+  if (!credentials || !credentials.username || !credentials.password) {
+    credentials = { username: 'admin', password: 'admin' };
+    localStorage.setItem(AUTH_KEY, JSON.stringify(credentials));
+  }
+
+  const loginScreen = document.getElementById('login-screen');
+  const loginForm = document.getElementById('login-form');
+  const errorMsg = document.getElementById('login-error-msg');
+
+  // Check login session status
+  const isLoggedIn = localStorage.getItem(SESSION_KEY) === 'true';
+  if (loginScreen) {
+    if (isLoggedIn) {
+      loginScreen.style.display = 'none';
+    } else {
+      loginScreen.style.display = 'flex';
+    }
+  }
+
+  // Handle Login Form Submit
+  if (loginForm) {
+    loginForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const uInput = document.getElementById('login-username').value.trim();
+      const pInput = document.getElementById('login-password').value.trim();
+
+      const currentCreds = JSON.parse(localStorage.getItem(AUTH_KEY)) || { username: 'admin', password: 'admin' };
+
+      if (uInput === currentCreds.username && pInput === currentCreds.password) {
+        localStorage.setItem(SESSION_KEY, 'true');
+        if (errorMsg) errorMsg.style.display = 'none';
+        if (loginScreen) loginScreen.style.display = 'none';
+        refreshAppViews();
+      } else {
+        if (errorMsg) {
+          errorMsg.textContent = '❌ Username atau Password salah!';
+          errorMsg.style.display = 'block';
+        }
+      }
+    });
+  }
+
+  // Settings Tab Auth Config Form
+  const cfgU = document.getElementById('cfg-auth-username');
+  const cfgP = document.getElementById('cfg-auth-password');
+  if (cfgU) cfgU.value = credentials.username;
+
+  const saveAuthBtn = document.getElementById('save-auth-config');
+  const authStatus = document.getElementById('auth-status');
+
+  if (saveAuthBtn) {
+    saveAuthBtn.addEventListener('click', () => {
+      const newU = document.getElementById('cfg-auth-username').value.trim();
+      const newP = document.getElementById('cfg-auth-password').value.trim();
+
+      if (newU && newP) {
+        localStorage.setItem(AUTH_KEY, JSON.stringify({ username: newU, password: newP }));
+        if (authStatus) {
+          authStatus.style.color = '#22c55e';
+          authStatus.textContent = '✅ Akun Admin berhasil diperbarui!';
+        }
+      } else {
+        if (authStatus) {
+          authStatus.style.color = '#ef4444';
+          authStatus.textContent = '⚠️ Username dan Password baru tidak boleh kosong.';
+        }
+      }
+    });
+  }
+
+  // Logout Button
+  const logoutBtn = document.getElementById('app-logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      localStorage.setItem(SESSION_KEY, 'false');
+      if (loginScreen) loginScreen.style.display = 'flex';
+      document.querySelector('[data-tab="tab-beranda"]')?.click();
     });
   }
 }
