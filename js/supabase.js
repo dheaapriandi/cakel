@@ -102,6 +102,8 @@ const DataStore = {
     let grades = JSON.parse(localStorage.getItem(STORAGE_KEYS.GRADES)) || [];
     grades = grades.filter(g => g.class_id !== id);
     localStorage.setItem(STORAGE_KEYS.GRADES, JSON.stringify(grades));
+
+    this.deleteFromCloud('classes', id);
   },
   getStudents(classId) {
     const students = JSON.parse(localStorage.getItem(STORAGE_KEYS.STUDENTS)) || [];
@@ -119,6 +121,8 @@ const DataStore = {
     let students = JSON.parse(localStorage.getItem(STORAGE_KEYS.STUDENTS)) || [];
     students = students.filter(s => s.id !== id);
     localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
+
+    this.deleteFromCloud('students', id);
   },
   getAttendance(classId, date) {
     const records = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) || [];
@@ -170,11 +174,54 @@ const DataStore = {
   async syncToCloud(tableName, payload) {
     if (supabaseClient) {
       try {
-        const { error } = await supabaseClient.from(tableName).insert([payload]);
+        const { error } = await supabaseClient.from(tableName).upsert([payload]);
         if (error) console.error(`Cloud Sync Error (${tableName}):`, error);
       } catch (err) {
         console.error("Cloud Sync Exception:", err);
       }
+    }
+  },
+  async deleteFromCloud(tableName, id) {
+    if (supabaseClient) {
+      try {
+        const { error } = await supabaseClient.from(tableName).delete().eq('id', id);
+        if (error) console.error(`Cloud Delete Error (${tableName}):`, error);
+      } catch (err) {
+        console.error("Cloud Delete Exception:", err);
+      }
+    }
+  },
+  async fetchFromCloud() {
+    if (!supabaseClient) return false;
+    try {
+      // Fetch classes
+      const { data: cloudClasses, error: errCls } = await supabaseClient.from('classes').select('*');
+      if (!errCls && cloudClasses && cloudClasses.length > 0) {
+        localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify(cloudClasses));
+      }
+
+      // Fetch students
+      const { data: cloudStudents, error: errStd } = await supabaseClient.from('students').select('*');
+      if (!errStd && cloudStudents && cloudStudents.length > 0) {
+        localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(cloudStudents));
+      }
+
+      // Fetch attendance
+      const { data: cloudAtt, error: errAtt } = await supabaseClient.from('attendance').select('*');
+      if (!errAtt && cloudAtt && cloudAtt.length > 0) {
+        localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(cloudAtt));
+      }
+
+      // Fetch grades
+      const { data: cloudGrades, error: errGrd } = await supabaseClient.from('grades').select('*');
+      if (!errGrd && cloudGrades && cloudGrades.length > 0) {
+        localStorage.setItem(STORAGE_KEYS.GRADES, JSON.stringify(cloudGrades));
+      }
+
+      return true;
+    } catch (err) {
+      console.error('Cloud Sync Pull Error:', err);
+      return false;
     }
   }
 };

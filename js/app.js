@@ -1,10 +1,14 @@
 // Main Application Router & Controller
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // Load Initial Seed Data if empty
   window.loadInitialSeedData();
 
   // Try initializing Supabase if credentials exist
-  window.initSupabase();
+  const hasSupabase = window.initSupabase();
+
+  if (hasSupabase && window.DataStore.fetchFromCloud) {
+    await window.DataStore.fetchFromCloud();
+  }
 
   // Setup Class Dropdown
   setupClassDropdown();
