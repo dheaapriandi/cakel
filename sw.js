@@ -1,4 +1,4 @@
-const CACHE_NAME = 'absensi-nilai-v1';
+const CACHE_NAME = 'cakel-v1';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

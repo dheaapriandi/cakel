@@ -1,7 +1,7 @@
 {
-  "name": "Absensi & Nilai Siswa",
-  "short_name": "Absensi",
-  "description": "Aplikasi Absensi dan Nilai Siswa Mobile PWA",
+  "name": "Cakel - Absensi & Nilai",
+  "short_name": "Cakel",
+  "description": "Cakel - Aplikasi Catatan Kehadiran & Nilai Siswa",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f8f9fa",
