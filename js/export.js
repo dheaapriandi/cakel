@@ -139,7 +139,7 @@ function processBatchStudentImport(classId) {
   const textInputEl = document.getElementById('batch-text-input');
   const studentsToInsert = [];
 
-  // Parse Text Input
+  // Parse Text Input if provided
   const rawText = textInputEl ? textInputEl.value.trim() : '';
   if (rawText) {
     const lines = rawText.split('\n');
@@ -148,14 +148,14 @@ function processBatchStudentImport(classId) {
         const parts = line.split(',');
         const name = parts[0].trim();
         const nis = parts[1] ? parts[1].trim() : '';
-        if (name) {
+        if (name && !/^(nama|nama siswa|name|student name)$/i.test(name)) {
           studentsToInsert.push({ name, nis });
         }
       }
     });
   }
 
-  // Parse Excel / File Input if provided
+  // Parse Excel / CSV File Input if provided
   const file = fileInputEl && fileInputEl.files ? fileInputEl.files[0] : null;
   if (file && typeof XLSX !== 'undefined') {
     const reader = new FileReader();
@@ -165,13 +165,37 @@ function processBatchStudentImport(classId) {
         const workbook = XLSX.read(data, { type: 'array' });
         const firstSheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[firstSheetName];
-        const jsonRows = XLSX.utils.sheet_to_json(sheet);
+        const jsonRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
 
         jsonRows.forEach(row => {
-          const name = row['Nama Siswa'] || row['Nama'] || row['name'] || row['nama'] || Object.values(row)[0];
-          const nis = row['NIS'] || row['nis'] || Object.values(row)[1] || '';
-          if (name && typeof name === 'string' && name.trim()) {
-            studentsToInsert.push({ name: name.trim(), nis: String(nis).trim() });
+          let name = '';
+          let nis = '';
+
+          const keys = Object.keys(row);
+          const nameKey = keys.find(k => /nama|name|siswa/i.test(k));
+          const nisKey = keys.find(k => /nis|nokind|no_induk|id/i.test(k));
+
+          if (nameKey && row[nameKey] !== undefined && row[nameKey] !== null && String(row[nameKey]).trim()) {
+            name = String(row[nameKey]).trim();
+            if (nisKey && row[nisKey] !== undefined && row[nisKey] !== null) {
+              nis = String(row[nisKey]).trim();
+            }
+          } else {
+            // Fallback for headerless or custom column names
+            const values = Object.values(row).map(v => String(v).trim()).filter(v => v.length > 0);
+            const stringValues = values.filter(v => isNaN(v) || v.length > 4);
+            if (stringValues.length > 0) {
+              name = stringValues[0];
+              const remaining = values.filter(v => v !== name);
+              if (remaining.length > 0) nis = remaining[0];
+            } else if (values.length > 0) {
+              name = values[0];
+              if (values.length > 1) nis = values[1];
+            }
+          }
+
+          if (name && !/^(nama|nama siswa|name|student name|no)$/i.test(name)) {
+            studentsToInsert.push({ name, nis });
           }
         });
 
@@ -189,15 +213,20 @@ function processBatchStudentImport(classId) {
 }
 
 function saveBatchStudents(classId, studentsArray) {
-  if (studentsArray.length === 0) return;
+  if (studentsArray.length === 0) {
+    alert('Tidak ada data nama siswa yang valid ditemukan.');
+    return;
+  }
 
-  let addedCount = 0;
-  studentsArray.forEach(item => {
-    window.DataStore.addStudent(classId, item.name, item.nis);
-    addedCount++;
-  });
+  if (window.DataStore && window.DataStore.addStudentsBatch) {
+    window.DataStore.addStudentsBatch(classId, studentsArray);
+  } else {
+    studentsArray.forEach(item => {
+      window.DataStore.addStudent(classId, item.name, item.nis);
+    });
+  }
 
-  alert(`✅ Berhasil mengimpor ${addedCount} data siswa secara batch!`);
+  alert(`✅ Berhasil mengimpor ${studentsArray.length} data siswa secara batch!`);
   
   const fileInputEl = document.getElementById('batch-file-input');
   const textInputEl = document.getElementById('batch-text-input');

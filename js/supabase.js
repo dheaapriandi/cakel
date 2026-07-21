@@ -125,6 +125,20 @@ const DataStore = {
     this.syncToCloud('students', newStudent);
     return newStudent;
   },
+  addStudentsBatch(classId, studentsArray) {
+    const students = JSON.parse(localStorage.getItem(STORAGE_KEYS.STUDENTS)) || [];
+    const newStudents = [];
+
+    studentsArray.forEach(item => {
+      const newStudent = { id: generateUUID(), class_id: classId, name: item.name, nis: item.nis || '' };
+      students.push(newStudent);
+      newStudents.push(newStudent);
+    });
+
+    localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
+    this.syncToCloud('students', newStudents);
+    return newStudents;
+  },
   removeStudent(id) {
     let students = JSON.parse(localStorage.getItem(STORAGE_KEYS.STUDENTS)) || [];
     students = students.filter(s => s.id !== id);
