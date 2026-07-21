@@ -152,8 +152,8 @@
   <!-- Main Scrollable Content Container -->
   <main class="main-content">
 
-    <!-- Class Selector Banner Card (Available on all tabs) -->
-    <div class="class-card" id="class-selector-card">
+    <!-- Class & Semester Selector Banner Card -->
+    <div class="class-card" id="class-selector-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
       <div class="class-info">
         <div class="class-icon">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
@@ -164,10 +164,13 @@
           <!-- Populated by JS -->
         </select>
       </div>
-      <div class="class-arrow">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 18l6-6-6-6"/>
-        </svg>
+
+      <div class="semester-info" style="display: flex; align-items: center; gap: 8px;">
+        <label for="semester-dropdown" style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">Semester:</label>
+        <select id="semester-dropdown" class="class-dropdown-select" style="font-size: 13px; font-weight: 700; padding: 6px 12px; background: #f4f4f5; border-radius: 10px; border: 1px solid #e4e4e7;">
+          <option value="1">📘 Semester 1 (Ganjil)</option>
+          <option value="2">📙 Semester 2 (Genap)</option>
+        </select>
       </div>
     </div>
 

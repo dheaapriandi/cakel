@@ -13,8 +13,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Setup Auth System
   setupAuthSystem();
 
-  // Setup Class Dropdown with cloud-restored classes
+  // Setup Class & Semester Dropdowns
   setupClassDropdown();
+  setupSemesterDropdown();
 
   const dropdown = document.getElementById('class-dropdown');
   if (dropdown) {
@@ -58,10 +59,30 @@ function setupClassDropdown() {
   });
 
   // Preserve previously selected class if it exists in the list
-  if (previousSelectedValue && classes.some(c => c.id === previousSelectedValue)) {
+  if (previousSelectedValue && Array.from(dropdown.options).some(o => o.value === previousSelectedValue)) {
     dropdown.value = previousSelectedValue;
   }
 }
+
+function getCurrentSemester() {
+  const dropdown = document.getElementById('semester-dropdown');
+  return dropdown ? dropdown.value : (localStorage.getItem('absensi_active_semester') || '1');
+}
+
+function setupSemesterDropdown() {
+  const dropdown = document.getElementById('semester-dropdown');
+  if (!dropdown) return;
+
+  const saved = localStorage.getItem('absensi_active_semester');
+  if (saved) dropdown.value = saved;
+
+  dropdown.addEventListener('change', () => {
+    localStorage.setItem('absensi_active_semester', dropdown.value);
+    refreshAppViews();
+  });
+}
+
+window.getCurrentSemester = getCurrentSemester;
 
 function getCurrentClassId() {
   const dropdown = document.getElementById('class-dropdown');

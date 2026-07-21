@@ -3,14 +3,15 @@ function renderNilaiTab(classId) {
   const container = document.getElementById('nilai-history-list');
   if (!container) return;
 
-  const grades = window.DataStore.getGrades(classId);
+  const semester = window.getCurrentSemester ? window.getCurrentSemester() : '1';
+  const grades = window.DataStore.getGrades(classId, semester);
   const students = window.DataStore.getStudents(classId);
   
   if (grades.length === 0) {
     container.innerHTML = `
-      <div class="card p-20 text-center">
-        <div class="text-muted mb-12">Belum ada riwayat nilai untuk kelas ini.</div>
-        <button class="btn btn-primary" onclick="openInputNilaiModal()">+ Tambah Nilai</button>
+      <div class="card p-20 text-center" style="grid-column: 1 / -1;">
+        <div class="text-muted mb-12">Belum ada riwayat nilai untuk Semester ${semester} di kelas ini.</div>
+        <button class="btn btn-primary" onclick="openInputNilaiModal()">+ Tambah Nilai Baru</button>
       </div>
     `;
     return;

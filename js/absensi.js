@@ -89,9 +89,10 @@ function renderAbsensiHistory(classId) {
   const container = document.getElementById('absensi-history-list');
   if (!container) return;
 
-  const records = window.DataStore.getAttendance(classId);
+  const semester = window.getCurrentSemester ? window.getCurrentSemester() : '1';
+  const records = window.DataStore.getAttendance(classId, null, semester);
   if (records.length === 0) {
-    container.innerHTML = '<div class="text-muted p-12">Belum ada riwayat absensi.</div>';
+    container.innerHTML = `<div class="text-muted p-12">Belum ada riwayat absensi untuk Semester ${semester}.</div>`;
     return;
   }
 

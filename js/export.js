@@ -5,9 +5,12 @@ function exportDataToExcel(classId) {
     const currentClass = classes.find(c => c.id === classId) || classes[0] || { id: classId, name: 'Kelas' };
     const targetClassId = currentClass.id;
 
+    const semester = window.getCurrentSemester ? window.getCurrentSemester() : '1';
+    const semesterText = semester === '1' ? 'Semester 1 (Ganjil)' : 'Semester 2 (Genap)';
+
     const students = window.DataStore.getStudents(targetClassId);
-    const attendance = window.DataStore.getAttendance(targetClassId);
-    const grades = window.DataStore.getGrades(targetClassId);
+    const attendance = window.DataStore.getAttendance(targetClassId, null, semester);
+    const grades = window.DataStore.getGrades(targetClassId, semester);
 
     const formattedDateToday = new Date().toISOString().split('T')[0];
     const safeClassName = (currentClass.name || 'Kelas').replace(/[^a-zA-Z0-9]/g, '_');
@@ -30,6 +33,7 @@ function exportDataToExcel(classId) {
         return {
           'No': idx + 1,
           'Kelas': currentClass.name,
+          'Semester': semesterText,
           'Nama Siswa': s.name,
           'NIS': s.nis || '-',
           'Total Hadir': hadir,

@@ -158,13 +158,20 @@ const DataStore = {
         .then(({ error }) => { if (error) console.error('Cloud Delete Attendance Error:', error); });
     }
   },
-  getAttendance(classId, date) {
+  getAttendance(classId, date, semester) {
     const records = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) || [];
-    return records.filter(r => r.class_id === classId && (!date || r.date === date));
+    return records.filter(r => {
+      const matchClass = !classId || r.class_id === classId;
+      const matchDate = !date || r.date === date;
+      const matchSem = !semester || !r.semester || String(r.semester) === String(semester);
+      return matchClass && matchDate && matchSem;
+    });
   },
-  saveAttendanceRecord(classId, date, time, studentStatuses) {
+  saveAttendanceRecord(classId, date, time, studentStatuses, semester) {
     let records = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) || [];
     records = records.filter(r => !(r.class_id === classId && r.date === date));
+
+    const sem = semester || (window.getCurrentSemester ? window.getCurrentSemester() : '1');
 
     studentStatuses.forEach(item => {
       const newRec = {
@@ -173,7 +180,8 @@ const DataStore = {
         date: date,
         time: time || new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
         student_id: item.student_id,
-        status: item.status
+        status: item.status,
+        semester: sem
       };
       records.push(newRec);
       this.syncToCloud('attendance', newRec);
@@ -181,15 +189,20 @@ const DataStore = {
 
     localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(records));
   },
-  getGrades(classId) {
+  getGrades(classId, semester) {
     const grades = JSON.parse(localStorage.getItem(STORAGE_KEYS.GRADES)) || [];
-    return classId ? grades.filter(g => g.class_id === classId) : grades;
+    return grades.filter(g => {
+      const matchClass = !classId || g.class_id === classId;
+      const matchSem = !semester || !g.semester || String(g.semester) === String(semester);
+      return matchClass && matchSem;
+    });
   },
-  saveGradeRecord(classId, date, category, studentScores) {
+  saveGradeRecord(classId, date, category, studentScores, semester) {
     let grades = JSON.parse(localStorage.getItem(STORAGE_KEYS.GRADES)) || [];
-    // Remove existing records for same class, date, and category to prevent duplicates
     grades = grades.filter(g => !(g.class_id === classId && g.date === date && g.category === category));
     
+    const sem = semester || (window.getCurrentSemester ? window.getCurrentSemester() : '1');
+
     studentScores.forEach(item => {
       const newGrade = {
         id: generateUUID(),
@@ -198,7 +211,8 @@ const DataStore = {
         category: category,
         title: category,
         student_id: item.student_id,
-        score: parseFloat(item.score) || 0
+        score: parseFloat(item.score) || 0,
+        semester: sem
       };
       grades.push(newGrade);
       this.syncToCloud('grades', newGrade);
