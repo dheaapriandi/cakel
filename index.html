@@ -66,12 +66,17 @@
     (function() {
       try {
         var loggedIn = localStorage.getItem('absensi_session_logged_in') === 'true';
-        if (!loggedIn) {
+        if (loggedIn) {
+          document.body.classList.add('logged-in');
+        } else {
           document.getElementById('login-screen').style.display = 'flex';
         }
       } catch (e) {}
     })();
   </script>
+
+  <!-- APP CONTENT CONTAINER (LOCKED UNTIL AUTHENTICATED) -->
+  <div class="app-content-container">
 
   <!-- DESKTOP SIDEBAR NAVIGATION -->
   <aside class="desktop-sidebar">
@@ -622,6 +627,8 @@ CREATE TABLE IF NOT EXISTS app_settings (
   </div>
 
   </div><!-- /.app-main-wrapper -->
+
+  </div><!-- /.app-content-container -->
 
   <!-- Scripts -->
   <script src="./js/supabase.js"></script>

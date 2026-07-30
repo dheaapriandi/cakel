@@ -677,8 +677,10 @@ function setupAuthSystem() {
   const isLoggedIn = localStorage.getItem(SESSION_KEY) === 'true';
   if (loginScreen) {
     if (isLoggedIn) {
+      document.body.classList.add('logged-in');
       loginScreen.style.display = 'none';
     } else {
+      document.body.classList.remove('logged-in');
       loginScreen.style.display = 'flex';
     }
   }
@@ -694,6 +696,7 @@ function setupAuthSystem() {
 
       if (uInput === currentCreds.username && pInput === currentCreds.password) {
         localStorage.setItem(SESSION_KEY, 'true');
+        document.body.classList.add('logged-in');
         if (errorMsg) errorMsg.style.display = 'none';
         if (loginScreen) loginScreen.style.display = 'none';
         refreshAppViews();
@@ -743,6 +746,7 @@ function setupAuthSystem() {
   if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
       localStorage.setItem(SESSION_KEY, 'false');
+      document.body.classList.remove('logged-in');
       if (loginScreen) loginScreen.style.display = 'flex';
       document.querySelector('[data-tab="tab-beranda"]')?.click();
     });
