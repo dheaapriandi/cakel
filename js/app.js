@@ -256,6 +256,13 @@ function updateBerandaSummary(classId) {
   const semester = getCurrentSemester();
   const allAttendance = window.DataStore.getAttendance(classId, null, semester);
   if (allAttendance.length > 0) {
+    // Sort chronologically by date and time to guarantee the latest is at the end
+    allAttendance.sort((a, b) => {
+      const dateTimeA = `${a.date}T${a.time || '00:00'}`;
+      const dateTimeB = `${b.date}T${b.time || '00:00'}`;
+      return dateTimeA.localeCompare(dateTimeB);
+    });
+
     const lastRec = allAttendance[allAttendance.length - 1];
     const lastRecs = allAttendance.filter(a => a.date === lastRec.date);
     const lHadir = lastRecs.filter(a => a.status === 'Hadir').length;
@@ -272,8 +279,11 @@ function updateBerandaSummary(classId) {
   }
 
   // Last Grade Entry Card
-  const allGrades = window.DataStore.getGrades(classId);
+  const allGrades = window.DataStore.getGrades(classId, semester);
   if (allGrades.length > 0) {
+    // Sort chronologically by date to guarantee the latest is at the end
+    allGrades.sort((a, b) => a.date.localeCompare(b.date));
+
     const lastGrade = allGrades[allGrades.length - 1];
     const categoryGrades = allGrades.filter(g => g.date === lastGrade.date && g.category === lastGrade.category);
     const scores = categoryGrades.map(g => g.score);
