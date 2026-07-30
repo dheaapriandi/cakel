@@ -253,7 +253,8 @@ function updateBerandaSummary(classId) {
   document.getElementById('count-alpa').textContent = alpa;
 
   // Last Attendance Entry Card
-  const allAttendance = window.DataStore.getAttendance(classId);
+  const semester = getCurrentSemester();
+  const allAttendance = window.DataStore.getAttendance(classId, null, semester);
   if (allAttendance.length > 0) {
     const lastRec = allAttendance[allAttendance.length - 1];
     const lastRecs = allAttendance.filter(a => a.date === lastRec.date);

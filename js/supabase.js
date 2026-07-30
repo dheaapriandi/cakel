@@ -9,6 +9,21 @@ const STORAGE_KEYS = {
   CONFIG: 'absensi_supabase_config'
 };
 
+function generateDeterministicUUID(seed) {
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (let i = 0, c; i < seed.length; i++) {
+    c = seed.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 2654435761);
+    h2 = Math.imul(h2 ^ c, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  const hex = ((h1 >>> 0).toString(16).padStart(8, '0') + 
+               (h2 >>> 0).toString(16).padStart(8, '0') + 
+               (h1 ^ h2 >>> 0).toString(16).padStart(16, '0')).slice(0, 32);
+  return `${hex.slice(0,8)}-${hex.slice(8,12)}-4${hex.slice(13,16)}-a${hex.slice(17,20)}-${hex.slice(20,32)}`;
+}
+
 let supabaseClient = null;
 
 function generateUUID() {
@@ -207,8 +222,9 @@ const DataStore = {
     records = records.filter(r => !(r.class_id === classId && r.date === date && String(r.semester || '1') === String(sem)));
 
     studentStatuses.forEach(item => {
+      const deterministicId = generateDeterministicUUID(`${classId}_${item.student_id}_${date}_${sem}`);
       const newRec = {
-        id: generateUUID(),
+        id: deterministicId,
         class_id: classId,
         date: date,
         time: time || new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
@@ -237,8 +253,9 @@ const DataStore = {
     const sem = semester || (window.getCurrentSemester ? window.getCurrentSemester() : '1');
 
     studentScores.forEach(item => {
+      const deterministicId = generateDeterministicUUID(`${classId}_${item.student_id}_${date}_${category}_${sem}`);
       const newGrade = {
-        id: generateUUID(),
+        id: deterministicId,
         class_id: classId,
         date: date,
         category: category,
@@ -399,14 +416,23 @@ const DataStore = {
         if (!errAtt && cloudAtt) {
           const localAtt = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) || [];
           const attMap = new Map();
-          localAtt.forEach(a => attMap.set(a.id, a));
-          cloudAtt.forEach(a => attMap.set(a.id, a));
+          
+          // Use class_student_date_semester composite key to merge and eliminate duplicates
+          localAtt.forEach(a => {
+            const key = `${a.class_id}_${a.student_id}_${a.date}_${a.semester || '1'}`;
+            attMap.set(key, a);
+          });
+          cloudAtt.forEach(a => {
+            const key = `${a.class_id}_${a.student_id}_${a.date}_${a.semester || '1'}`;
+            attMap.set(key, a);
+          });
 
           localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(Array.from(attMap.values())));
           
-          // Push any local attendance missing in cloud
+          // Push any local attendance missing in cloud (matched by composite key)
           localAtt.forEach(la => {
-            if (!cloudAtt.some(ca => ca.id === la.id)) {
+            const lKey = `${la.class_id}_${la.student_id}_${la.date}_${la.semester || '1'}`;
+            if (!cloudAtt.some(ca => `${ca.class_id}_${ca.student_id}_${ca.date}_${ca.semester || '1'}` === lKey)) {
               this.syncToCloud('attendance', la);
             }
           });
@@ -421,14 +447,23 @@ const DataStore = {
         if (!errGrd && cloudGrades) {
           const localGrades = JSON.parse(localStorage.getItem(STORAGE_KEYS.GRADES)) || [];
           const grdMap = new Map();
-          localGrades.forEach(g => grdMap.set(g.id, g));
-          cloudGrades.forEach(g => grdMap.set(g.id, g));
+          
+          // Use class_student_date_category_semester composite key to merge
+          localGrades.forEach(g => {
+            const key = `${g.class_id}_${g.student_id}_${g.date}_${g.category}_${g.semester || '1'}`;
+            grdMap.set(key, g);
+          });
+          cloudGrades.forEach(g => {
+            const key = `${g.class_id}_${g.student_id}_${g.date}_${g.category}_${g.semester || '1'}`;
+            grdMap.set(key, g);
+          });
 
           localStorage.setItem(STORAGE_KEYS.GRADES, JSON.stringify(Array.from(grdMap.values())));
 
-          // Push any local grades missing in cloud
+          // Push any local grades missing in cloud (matched by composite key)
           localGrades.forEach(lg => {
-            if (!cloudGrades.some(cg => cg.id === lg.id)) {
+            const lKey = `${lg.class_id}_${lg.student_id}_${lg.date}_${lg.category}_${lg.semester || '1'}`;
+            if (!cloudGrades.some(cg => `${cg.class_id}_${cg.student_id}_${cg.date}_${cg.category}_${cg.semester || '1'}` === lKey)) {
               this.syncToCloud('grades', lg);
             }
           });
