@@ -827,18 +827,22 @@ function setupSupabaseSettings() {
   const statusDiv = document.getElementById('supabase-status');
 
   if (saveBtn) {
-    saveBtn.addEventListener('click', () => {
+    saveBtn.addEventListener('click', async () => {
       const url = document.getElementById('cfg-supabase-url').value.trim();
       const key = document.getElementById('cfg-supabase-key').value.trim();
 
       if (url && key) {
-        const success = window.saveSupabaseConfig(url, key);
-        if (success) {
+        statusDiv.style.color = '#71717a';
+        statusDiv.textContent = '⏳ Menghubungkan & menyinkronkan database Supabase...';
+        
+        const result = await window.saveSupabaseConfig(url, key);
+        if (result.success) {
           statusDiv.style.color = '#22c55e';
-          statusDiv.textContent = '✅ Berhasil terhubung ke Supabase!';
+          statusDiv.textContent = '✅ Berhasil terhubung & disinkronkan ke Supabase!';
+          refreshAppViews();
         } else {
           statusDiv.style.color = '#ef4444';
-          statusDiv.textContent = '❌ Gagal terhubung. Periksa URL dan Key Anda.';
+          statusDiv.textContent = `❌ Gagal terhubung: ${result.error}`;
         }
       } else {
         statusDiv.style.color = '#ef4444';

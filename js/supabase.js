@@ -44,9 +44,39 @@ function getSupabaseConfig() {
   };
 }
 
-function saveSupabaseConfig(url, key) {
+async function saveSupabaseConfig(url, key) {
+  const originalConfig = localStorage.getItem(STORAGE_KEYS.CONFIG);
   localStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify({ url, key }));
-  return initSupabase();
+
+  const initialized = initSupabase();
+  if (!initialized) {
+    if (originalConfig) localStorage.setItem(STORAGE_KEYS.CONFIG, originalConfig);
+    else localStorage.removeItem(STORAGE_KEYS.CONFIG);
+    initSupabase();
+    return { success: false, error: 'Format URL atau Key tidak valid.' };
+  }
+
+  try {
+    // Probe database schema connection by reading classes
+    const { error } = await supabaseClient.from('classes').select('id').limit(1);
+    if (error) throw error;
+
+    // Trigger immediate sync
+    if (window.DataStore && window.DataStore.fetchFromCloud) {
+      await window.DataStore.fetchFromCloud();
+    }
+    if (window.DataStore && window.DataStore.syncAllToCloudBatch) {
+      await window.DataStore.syncAllToCloudBatch();
+    }
+
+    return { success: true };
+  } catch (err) {
+    // Revert to original configuration if ping failed
+    if (originalConfig) localStorage.setItem(STORAGE_KEYS.CONFIG, originalConfig);
+    else localStorage.removeItem(STORAGE_KEYS.CONFIG);
+    initSupabase();
+    return { success: false, error: err.message || 'Koneksi ditolak oleh database Supabase.' };
+  }
 }
 
 // Initial Seed Data with valid UUIDs and auto-sync to cloud
@@ -364,25 +394,69 @@ const DataStore = {
       }
 
       // Smart Merge Attendance
-      const { data: cloudAtt, error: errAtt } = await supabaseClient.from('attendance').select('*');
-      if (!errAtt && cloudAtt) {
-        const localAtt = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) || [];
-        const attMap = new Map();
-        localAtt.forEach(a => attMap.set(a.id, a));
-        cloudAtt.forEach(a => attMap.set(a.id, a));
+      try {
+        const { data: cloudAtt, error: errAtt } = await supabaseClient.from('attendance').select('*');
+        if (!errAtt && cloudAtt) {
+          const localAtt = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) || [];
+          const attMap = new Map();
+          localAtt.forEach(a => attMap.set(a.id, a));
+          cloudAtt.forEach(a => attMap.set(a.id, a));
 
-        localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(Array.from(attMap.values())));
+          localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(Array.from(attMap.values())));
+          
+          // Push any local attendance missing in cloud
+          localAtt.forEach(la => {
+            if (!cloudAtt.some(ca => ca.id === la.id)) {
+              this.syncToCloud('attendance', la);
+            }
+          });
+        }
+      } catch (e) {
+        console.warn("Cloud Attendance Sync Warning:", e);
       }
 
       // Smart Merge Grades
-      const { data: cloudGrades, error: errGrd } = await supabaseClient.from('grades').select('*');
-      if (!errGrd && cloudGrades) {
-        const localGrades = JSON.parse(localStorage.getItem(STORAGE_KEYS.GRADES)) || [];
-        const grdMap = new Map();
-        localGrades.forEach(g => grdMap.set(g.id, g));
-        cloudGrades.forEach(g => grdMap.set(g.id, g));
+      try {
+        const { data: cloudGrades, error: errGrd } = await supabaseClient.from('grades').select('*');
+        if (!errGrd && cloudGrades) {
+          const localGrades = JSON.parse(localStorage.getItem(STORAGE_KEYS.GRADES)) || [];
+          const grdMap = new Map();
+          localGrades.forEach(g => grdMap.set(g.id, g));
+          cloudGrades.forEach(g => grdMap.set(g.id, g));
 
-        localStorage.setItem(STORAGE_KEYS.GRADES, JSON.stringify(Array.from(grdMap.values())));
+          localStorage.setItem(STORAGE_KEYS.GRADES, JSON.stringify(Array.from(grdMap.values())));
+
+          // Push any local grades missing in cloud
+          localGrades.forEach(lg => {
+            if (!cloudGrades.some(cg => cg.id === lg.id)) {
+              this.syncToCloud('grades', lg);
+            }
+          });
+        }
+      } catch (e) {
+        console.warn("Cloud Grades Sync Warning:", e);
+      }
+
+      // Smart Merge Notes
+      try {
+        const { data: cloudNotes, error: errNts } = await supabaseClient.from('notes').select('*');
+        if (!errNts && cloudNotes) {
+          const localNotes = JSON.parse(localStorage.getItem(STORAGE_KEYS.NOTES)) || [];
+          const noteMap = new Map();
+          localNotes.forEach(n => noteMap.set(n.id, n));
+          cloudNotes.forEach(n => noteMap.set(n.id, n));
+
+          localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(Array.from(noteMap.values())));
+
+          // Push any local notes missing in cloud
+          localNotes.forEach(ln => {
+            if (!cloudNotes.some(cn => cn.id === ln.id)) {
+              this.syncToCloud('notes', ln);
+            }
+          });
+        }
+      } catch (e) {
+        console.warn("Cloud Notes Sync Warning:", e);
       }
 
       // Sync Admin Credentials from Cloud app_settings

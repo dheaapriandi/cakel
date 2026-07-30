@@ -384,6 +384,37 @@
         </div>
         <button class="btn btn-primary mt-12" id="save-supabase-config">Simpan & Hubungkan Supabase</button>
         <div id="supabase-status" class="status-msg mt-8"></div>
+
+        <!-- SQL Schema Guide Panel -->
+        <div class="supabase-sql-guide mt-16" style="background: #fafafa; border: 1px dashed #e4e4e7; border-radius: 12px; padding: 14px; margin-top: 16px;">
+          <h4 style="font-size: 13px; font-weight: 700; color: #3f3f46; display: flex; align-items: center; gap: 6px;">
+            ⚠️ Penting: Update Skema Database Supabase Anda
+          </h4>
+          <p style="font-size: 12px; color: #71717a; margin-top: 4px; line-height: 1.4;">
+            Jika Anda menggunakan project Supabase pribadi, pastikan Anda telah menjalankan skrip SQL berikut di <b>Supabase Dashboard -> SQL Editor</b> agar sinkronisasi Semester & Catatan berfungsi:
+          </p>
+          <pre style="background: #18181b; color: #a7f3d0; font-size: 11px; padding: 10px; border-radius: 8px; overflow-x: auto; margin-top: 8px; font-family: monospace; user-select: all; white-space: pre;">-- 1. Tambah kolom semester jika belum ada
+ALTER TABLE attendance ADD COLUMN IF NOT EXISTS semester text DEFAULT '1';
+ALTER TABLE grades ADD COLUMN IF NOT EXISTS semester text DEFAULT '1';
+
+-- 2. Buat tabel notes untuk catatan kelas
+CREATE TABLE IF NOT EXISTS notes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  class_id uuid REFERENCES classes(id) ON DELETE CASCADE,
+  title text NOT NULL,
+  tag text DEFAULT 'Tugas',
+  content text,
+  date date DEFAULT CURRENT_DATE,
+  created_at timestamptz DEFAULT now()
+);
+
+-- 3. Buat tabel app_settings untuk login admin
+CREATE TABLE IF NOT EXISTS app_settings (
+  key text PRIMARY KEY,
+  value jsonb,
+  created_at timestamptz DEFAULT now()
+);</pre>
+        </div>
       </div>
 
       <div class="card setting-card">
