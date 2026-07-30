@@ -120,9 +120,12 @@ function renderAbsensiHistory(classId) {
 
     html += `
       <div class="card last-entry-card mb-12">
-        <div class="card-top-row">
+        <div class="card-top-row" style="display: flex; justify-content: space-between; align-items: center;">
           <span class="card-title-bold">${formattedDate} ${items[0] && items[0].time ? ', ' + items[0].time : ''}</span>
-          <button class="btn-text" style="color: #ef4444; font-size: 13px; font-weight: 600;" onclick="deleteAttendanceByDateConfirm('${classId}', '${dateStr}')">🗑️ Hapus</button>
+          <div style="display: flex; gap: 12px;">
+            <button class="btn-text" style="color: #4f46e5; font-size: 13px; font-weight: 700;" onclick="editAttendanceByDate('${classId}', '${dateStr}')">✏️ Edit</button>
+            <button class="btn-text" style="color: #ef4444; font-size: 13px; font-weight: 700;" onclick="deleteAttendanceByDateConfirm('${classId}', '${dateStr}')">🗑️ Hapus</button>
+          </div>
         </div>
         <div class="big-fraction-value">${hadir}/${total}</div>
         <div class="status-grid mini">
@@ -138,6 +141,20 @@ function renderAbsensiHistory(classId) {
   container.innerHTML = html;
 }
 
+function editAttendanceByDate(classId, dateStr) {
+  const datePicker = document.getElementById('absensi-date-picker');
+  if (datePicker) {
+    datePicker.value = dateStr;
+    renderAbsensiTab(classId);
+
+    // Scroll smoothly to top of main content to show the editing list
+    const scrollContainer = document.querySelector('.main-content');
+    if (scrollContainer) {
+      scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+}
+
 function deleteAttendanceByDateConfirm(classId, dateStr) {
   const formattedDate = formatDateIndo(dateStr);
   if (confirm(`Apakah Anda yakin ingin menghapus data absensi tanggal ${formattedDate}?`)) {
@@ -148,6 +165,7 @@ function deleteAttendanceByDateConfirm(classId, dateStr) {
 }
 
 window.deleteAttendanceByDateConfirm = deleteAttendanceByDateConfirm;
+window.editAttendanceByDate = editAttendanceByDate;
 
 function formatDateIndo(dateStr) {
   if (!dateStr) return '';
