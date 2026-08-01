@@ -1,6 +1,4 @@
-import { NextResponse } from 'next/server';
-
-export function middleware(req) {
+export default function middleware(req) {
   const authHeader = req.headers.get('authorization');
 
   if (authHeader) {
@@ -9,15 +7,22 @@ export function middleware(req) {
       try {
         const decoded = atob(credentials);
         const [username, password] = decoded.split(':');
-        // Username dan password server untuk memprivatkan website Anda
+        
+        // Ganti username & password server sesuai keinginan Anda
         if (username === 'admin' && password === 'cakelrahasia') {
-          return NextResponse.next();
+          // Lanjutkan ke halaman web asli (Header khusus Vercel untuk meneruskan request)
+          return new Response(null, {
+            headers: {
+              'x-middleware-next': '1'
+            }
+          });
         }
       } catch (e) {}
     }
   }
 
-  return new NextResponse('Authentication Required', {
+  // Hadang dengan prompt login Basic Auth jika kredensial salah atau tidak ada
+  return new Response('Authentication Required', {
     status: 401,
     headers: {
       'WWW-Authenticate': 'Basic realm="Secure Area"',
@@ -27,7 +32,7 @@ export function middleware(req) {
 
 export const config = {
   matcher: [
-    // Lindungi semua halaman kecuali aset static PWA & service worker
+    // Jalankan middleware untuk seluruh halaman kecuali static assets utama
     '/((?!api|_next/static|_next/image|favicon.ico|manifest.json|icons|sw.js).*)',
   ],
 };
