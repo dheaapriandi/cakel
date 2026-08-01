@@ -8,8 +8,9 @@ function renderAbsensiTab(classId) {
 
   const currentDate = datePicker.value;
   const semester = window.getCurrentSemester ? window.getCurrentSemester() : '1';
+  const subjectId = window.getActiveSubjectId ? window.getActiveSubjectId() : '';
   const students = window.DataStore.getStudents(classId);
-  const existingAttendance = window.DataStore.getAttendance(classId, currentDate, semester);
+  const existingAttendance = window.DataStore.getAttendance(classId, currentDate, semester, subjectId);
   
   const container = document.getElementById('absensi-student-list');
   if (!container) return;
@@ -70,7 +71,10 @@ function saveCurrentAbsensi(classId) {
     studentStatuses.push({ student_id: studentId, status });
   });
 
-  window.DataStore.saveAttendanceRecord(classId, currentDate, nowTime, studentStatuses);
+  const semester = window.getCurrentSemester ? window.getCurrentSemester() : '1';
+  const subjectId = window.getActiveSubjectId ? window.getActiveSubjectId() : '';
+
+  window.DataStore.saveAttendanceRecord(classId, currentDate, nowTime, studentStatuses, semester, subjectId);
   alert('Data Absensi Berhasil Disimpan!');
   
   // Refresh Beranda & Absensi view
@@ -91,7 +95,8 @@ function renderAbsensiHistory(classId) {
   if (!container) return;
 
   const semester = window.getCurrentSemester ? window.getCurrentSemester() : '1';
-  const records = window.DataStore.getAttendance(classId, null, semester);
+  const subjectId = window.getActiveSubjectId ? window.getActiveSubjectId() : '';
+  const records = window.DataStore.getAttendance(classId, null, semester, subjectId);
   if (records.length === 0) {
     container.innerHTML = `<div class="text-muted p-12">Belum ada riwayat absensi untuk Semester ${semester}.</div>`;
     return;
@@ -157,8 +162,9 @@ function editAttendanceByDate(classId, dateStr) {
 
 function deleteAttendanceByDateConfirm(classId, dateStr) {
   const formattedDate = formatDateIndo(dateStr);
+  const subjectId = window.getActiveSubjectId ? window.getActiveSubjectId() : '';
   if (confirm(`Apakah Anda yakin ingin menghapus data absensi tanggal ${formattedDate}?`)) {
-    window.DataStore.removeAttendanceByDate(classId, dateStr);
+    window.DataStore.removeAttendanceByDate(classId, dateStr, subjectId);
     renderAbsensiTab(classId);
     if (window.refreshAppViews) window.refreshAppViews();
   }

@@ -8,9 +8,14 @@ function exportDataToExcel(classId) {
     const semester = window.getCurrentSemester ? window.getCurrentSemester() : '1';
     const semesterText = semester === '1' ? 'Semester 1 (Ganjil)' : 'Semester 2 (Genap)';
 
+    const subjectId = window.getActiveSubjectId ? window.getActiveSubjectId() : '';
+    const subjects = window.DataStore.getSubjects(targetClassId);
+    const activeSubject = subjects.find(s => s.id === subjectId);
+    const subjectNameText = activeSubject ? activeSubject.name : 'Semua Mapel';
+
     const students = window.DataStore.getStudents(targetClassId);
-    const attendance = window.DataStore.getAttendance(targetClassId, null, semester);
-    const grades = window.DataStore.getGrades(targetClassId, semester);
+    const attendance = window.DataStore.getAttendance(targetClassId, null, semester, subjectId);
+    const grades = window.DataStore.getGrades(targetClassId, semester, subjectId);
 
     const formattedDateToday = new Date().toISOString().split('T')[0];
     const safeClassName = (currentClass.name || 'Kelas').replace(/[^a-zA-Z0-9]/g, '_');
@@ -33,6 +38,7 @@ function exportDataToExcel(classId) {
         return {
           'No': idx + 1,
           'Kelas': currentClass.name,
+          'Mata Pelajaran': subjectNameText,
           'Semester': semesterText,
           'Nama Siswa': s.name,
           'NIS': s.nis || '-',
@@ -47,9 +53,11 @@ function exportDataToExcel(classId) {
       // Sheet 2: Detail Absensi
       const attendanceRows = attendance.map((a, idx) => {
         const std = students.find(s => s.id === a.student_id);
+        const subj = subjects.find(sub => sub.id === a.subject_id);
         return {
           'No': idx + 1,
           'Kelas': currentClass.name,
+          'Mata Pelajaran': subj ? subj.name : 'Umum/Default',
           'Tanggal': a.date,
           'Waktu': a.time || '-',
           'Nama Siswa': std ? std.name : a.student_id,
@@ -60,9 +68,11 @@ function exportDataToExcel(classId) {
       // Sheet 3: Detail Nilai
       const gradeRows = grades.map((g, idx) => {
         const std = students.find(s => s.id === g.student_id);
+        const subj = subjects.find(sub => sub.id === g.subject_id);
         return {
           'No': idx + 1,
           'Kelas': currentClass.name,
+          'Mata Pelajaran': subj ? subj.name : 'Umum/Default',
           'Tanggal': g.date,
           'Kategori/Judul': g.category || g.title || 'Ulangan',
           'Nama Siswa': std ? std.name : g.student_id,

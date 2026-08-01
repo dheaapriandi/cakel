@@ -16,10 +16,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Setup Class & Semester Dropdowns
   setupClassDropdown();
   setupSemesterDropdown();
+  setupSubjectDropdown();
 
   const dropdown = document.getElementById('class-dropdown');
   if (dropdown) {
     dropdown.addEventListener('change', () => {
+      setupSubjectDropdown();
+      refreshAppViews();
+    });
+  }
+
+  const subjDropdown = document.getElementById('subject-dropdown');
+  if (subjDropdown) {
+    subjDropdown.addEventListener('change', () => {
       refreshAppViews();
     });
   }
@@ -83,6 +92,40 @@ function setupSemesterDropdown() {
 }
 
 window.getCurrentSemester = getCurrentSemester;
+
+function getActiveSubjectId() {
+  const dropdown = document.getElementById('subject-dropdown');
+  return dropdown ? dropdown.value : '';
+}
+window.getActiveSubjectId = getActiveSubjectId;
+
+function setupSubjectDropdown() {
+  const dropdown = document.getElementById('subject-dropdown');
+  if (!dropdown) return;
+
+  const prevVal = dropdown.value;
+  const classId = getCurrentClassId();
+  const subjects = window.DataStore.getSubjects(classId);
+
+  dropdown.innerHTML = '';
+
+  if (subjects.length === 0) {
+    dropdown.innerHTML = '<option value="">⚠️ Belum ada Mapel</option>';
+    return;
+  }
+
+  subjects.forEach(sub => {
+    const opt = document.createElement('option');
+    opt.value = sub.id;
+    opt.textContent = `📚 ${sub.name}`;
+    dropdown.appendChild(opt);
+  });
+
+  if (prevVal && Array.from(dropdown.options).some(o => o.value === prevVal)) {
+    dropdown.value = prevVal;
+  }
+}
+window.setupSubjectDropdown = setupSubjectDropdown;
 
 function getCurrentClassId() {
   const dropdown = document.getElementById('class-dropdown');
@@ -218,12 +261,16 @@ function updateBerandaSummary(classId) {
   const students = window.DataStore.getStudents(classId);
   const totalStudents = students.length || 1;
 
+  const semester = getCurrentSemester();
+  const subjectId = getActiveSubjectId();
+
   // Render 6-Month Chart
+  // Passing subjectId so chart can filter if needed (or keep global class-level)
   window.renderAttendanceChart('attendance-chart');
 
   // Attendance for Today - deduplicated per student
   const todayStr = new Date().toISOString().split('T')[0];
-  const allTodayAttendance = window.DataStore.getAttendance(classId, todayStr);
+  const allTodayAttendance = window.DataStore.getAttendance(classId, todayStr, semester, subjectId);
 
   const studentAttMap = new Map();
   allTodayAttendance.forEach(a => {
@@ -253,8 +300,7 @@ function updateBerandaSummary(classId) {
   document.getElementById('count-alpa').textContent = alpa;
 
   // Last Attendance Entry Card
-  const semester = getCurrentSemester();
-  const allAttendance = window.DataStore.getAttendance(classId, null, semester);
+  const allAttendance = window.DataStore.getAttendance(classId, null, semester, subjectId);
   if (allAttendance.length > 0) {
     // Sort chronologically by date and time to guarantee the latest is at the end
     allAttendance.sort((a, b) => {
@@ -279,7 +325,7 @@ function updateBerandaSummary(classId) {
   }
 
   // Last Grade Entry Card
-  const allGrades = window.DataStore.getGrades(classId, semester);
+  const allGrades = window.DataStore.getGrades(classId, semester, subjectId);
   if (allGrades.length > 0) {
     // Sort chronologically by date to guarantee the latest is at the end
     allGrades.sort((a, b) => a.date.localeCompare(b.date));
@@ -396,7 +442,9 @@ function renderTopStudents(classId) {
   if (!container) return;
 
   const students = window.DataStore.getStudents(classId);
-  const grades = window.DataStore.getGrades(classId);
+  const semester = getCurrentSemester();
+  const subjectId = getActiveSubjectId();
+  const grades = window.DataStore.getGrades(classId, semester, subjectId);
 
   if (students.length === 0 || grades.length === 0) {
     container.innerHTML = '<div class="text-muted p-12 text-center" style="font-size:13px;">Belum ada data nilai siswa.</div>';
@@ -474,6 +522,12 @@ function setupHeaderMenu() {
       dropdown.classList.remove('active');
       renderStudentListModal();
       document.getElementById('modal-manage-students').classList.add('open');
+    });
+
+    document.getElementById('menu-opt-subjects')?.addEventListener('click', () => {
+      dropdown.classList.remove('active');
+      renderSubjectListModal();
+      document.getElementById('modal-manage-subjects').classList.add('open');
     });
 
     document.getElementById('menu-opt-export')?.addEventListener('click', () => {
@@ -611,6 +665,31 @@ function setupModals() {
         nameInput.value = '';
         nisInput.value = '';
         renderStudentListModal();
+        refreshAppViews();
+      }
+    });
+  }
+
+  // Manage Subjects Modal
+  const manageSubjectsBtn = document.getElementById('manage-subjects-btn');
+  if (manageSubjectsBtn) {
+    manageSubjectsBtn.addEventListener('click', () => {
+      renderSubjectListModal();
+      document.getElementById('modal-manage-subjects').classList.add('open');
+    });
+  }
+
+  const addSubjectBtn = document.getElementById('add-subject-btn');
+  if (addSubjectBtn) {
+    addSubjectBtn.addEventListener('click', () => {
+      const nameInput = document.getElementById('new-subject-name');
+      const name = nameInput.value.trim();
+      const classId = getCurrentClassId();
+      if (name) {
+        window.DataStore.addSubject(classId, name);
+        nameInput.value = '';
+        setupSubjectDropdown();
+        renderSubjectListModal();
         refreshAppViews();
       }
     });
@@ -868,3 +947,39 @@ function setupSupabaseSettings() {
 }
 
 window.refreshAppViews = refreshAppViews;
+
+function renderSubjectListModal() {
+  const container = document.getElementById('subject-list-container');
+  if (!container) return;
+
+  const classId = getCurrentClassId();
+  const subjects = window.DataStore.getSubjects(classId);
+
+  if (subjects.length === 0) {
+    container.innerHTML = '<div class="text-muted p-12 text-center" style="font-size:13px;">Belum ada mata pelajaran di kelas ini.</div>';
+    return;
+  }
+
+  let html = '';
+  subjects.forEach(s => {
+    html += `
+      <div class="student-item-row" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f4f4f5;">
+        <span class="student-name" style="font-size: 14px; font-weight: 600; color: #18181b;">${s.name}</span>
+        <button class="btn-text" style="color: #ef4444; font-size: 13px; font-weight: 600; border: none; background: none; cursor: pointer;" onclick="deleteSubjectConfirm('${s.id}', '${s.name}')">🗑️ Hapus</button>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+}
+
+function deleteSubjectConfirm(subjectId, subjectName) {
+  if (confirm(`Hapus mata pelajaran "${subjectName}" beserta seluruh data absensi dan nilai di dalamnya?`)) {
+    window.DataStore.removeSubject(subjectId);
+    setupSubjectDropdown();
+    renderSubjectListModal();
+    refreshAppViews();
+  }
+}
+
+window.renderSubjectListModal = renderSubjectListModal;
+window.deleteSubjectConfirm = deleteSubjectConfirm;

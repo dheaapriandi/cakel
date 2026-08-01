@@ -5,6 +5,7 @@ const STORAGE_KEYS = {
   ATTENDANCE: 'absensi_attendance_data',
   GRADES: 'absensi_grades_data',
   NOTES: 'absensi_notes_data',
+  SUBJECTS: 'absensi_subjects_data',
   AUTH: 'absensi_auth_credentials',
   CONFIG: 'absensi_supabase_config'
 };
@@ -193,17 +194,40 @@ const DataStore = {
 
     this.deleteFromCloud('students', id);
   },
-  removeAttendanceByDate(classId, date) {
+  getSubjects(classId) {
+    const subjects = JSON.parse(localStorage.getItem(STORAGE_KEYS.SUBJECTS)) || [];
+    return classId ? subjects.filter(s => s.class_id === classId) : subjects;
+  },
+  addSubject(classId, name) {
+    const subjects = this.getSubjects();
+    const newSubject = { id: generateUUID(), class_id: classId, name };
+    subjects.push(newSubject);
+    localStorage.setItem(STORAGE_KEYS.SUBJECTS, JSON.stringify(subjects));
+    this.syncToCloud('subjects', newSubject);
+    return newSubject;
+  },
+  removeSubject(id) {
+    let subjects = this.getSubjects();
+    subjects = subjects.filter(s => s.id !== id);
+    localStorage.setItem(STORAGE_KEYS.SUBJECTS, JSON.stringify(subjects));
+    this.deleteFromCloud('subjects', id);
+  },
+  removeAttendanceByDate(classId, date, subjectId) {
     let records = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) || [];
-    records = records.filter(r => !(r.class_id === classId && r.date === date));
+    records = records.filter(r => !(r.class_id === classId && r.date === date && (r.subject_id || '') === (subjectId || '')));
     localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(records));
 
     if (supabaseClient) {
-      supabaseClient.from('attendance').delete().eq('class_id', classId).eq('date', date)
-        .then(({ error }) => { if (error) console.error('Cloud Delete Attendance Error:', error); });
+      let query = supabaseClient.from('attendance').delete().eq('class_id', classId).eq('date', date);
+      if (subjectId) {
+        query = query.eq('subject_id', subjectId);
+      } else {
+        query = query.is('subject_id', null);
+      }
+      query.then(({ error }) => { if (error) console.error('Cloud Delete Attendance Error:', error); });
     }
   },
-  getAttendance(classId, date, semester) {
+  getAttendance(classId, date, semester, subjectId) {
     const records = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) || [];
     const targetSem = semester || (window.getCurrentSemester ? window.getCurrentSemester() : '1');
     return records.filter(r => {
@@ -211,18 +235,19 @@ const DataStore = {
       const matchDate = !date || r.date === date;
       const recordSem = String(r.semester || '1');
       const matchSem = !targetSem || recordSem === String(targetSem);
-      return matchClass && matchDate && matchSem;
+      const matchSubject = !subjectId || (r.subject_id || '') === String(subjectId);
+      return matchClass && matchDate && matchSem && matchSubject;
     });
   },
-  saveAttendanceRecord(classId, date, time, studentStatuses, semester) {
+  saveAttendanceRecord(classId, date, time, studentStatuses, semester, subjectId) {
     let records = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) || [];
     const sem = semester || (window.getCurrentSemester ? window.getCurrentSemester() : '1');
 
-    // Remove ONLY attendance for the SAME class, SAME date, AND SAME semester
-    records = records.filter(r => !(r.class_id === classId && r.date === date && String(r.semester || '1') === String(sem)));
+    // Remove old attendance for same class, date, semester, and subjectId
+    records = records.filter(r => !(r.class_id === classId && r.date === date && String(r.semester || '1') === String(sem) && (r.subject_id || '') === (subjectId || '')));
 
     studentStatuses.forEach(item => {
-      const deterministicId = generateDeterministicUUID(`${classId}_${item.student_id}_${date}_${sem}`);
+      const deterministicId = generateDeterministicUUID(`${classId}_${item.student_id}_${date}_${sem}_${subjectId || 'default'}`);
       const newRec = {
         id: deterministicId,
         class_id: classId,
@@ -230,7 +255,8 @@ const DataStore = {
         time: time || new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
         student_id: item.student_id,
         status: item.status,
-        semester: String(sem)
+        semester: String(sem),
+        subject_id: subjectId || null
       };
       records.push(newRec);
       this.syncToCloud('attendance', newRec);
@@ -238,22 +264,23 @@ const DataStore = {
 
     localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(records));
   },
-  getGrades(classId, semester) {
+  getGrades(classId, semester, subjectId) {
     const grades = JSON.parse(localStorage.getItem(STORAGE_KEYS.GRADES)) || [];
     return grades.filter(g => {
       const matchClass = !classId || g.class_id === classId;
       const matchSem = !semester || !g.semester || String(g.semester) === String(semester);
-      return matchClass && matchSem;
+      const matchSubject = !subjectId || (g.subject_id || '') === String(subjectId);
+      return matchClass && matchSem && matchSubject;
     });
   },
-  saveGradeRecord(classId, date, category, studentScores, semester) {
+  saveGradeRecord(classId, date, category, studentScores, semester, subjectId) {
     let grades = JSON.parse(localStorage.getItem(STORAGE_KEYS.GRADES)) || [];
-    grades = grades.filter(g => !(g.class_id === classId && g.date === date && g.category === category));
+    grades = grades.filter(g => !(g.class_id === classId && g.date === date && g.category === category && (g.subject_id || '') === (subjectId || '')));
     
     const sem = semester || (window.getCurrentSemester ? window.getCurrentSemester() : '1');
 
     studentScores.forEach(item => {
-      const deterministicId = generateDeterministicUUID(`${classId}_${item.student_id}_${date}_${category}_${sem}`);
+      const deterministicId = generateDeterministicUUID(`${classId}_${item.student_id}_${date}_${category}_${sem}_${subjectId || 'default'}`);
       const newGrade = {
         id: deterministicId,
         class_id: classId,
@@ -262,7 +289,8 @@ const DataStore = {
         title: category,
         student_id: item.student_id,
         score: parseFloat(item.score) || 0,
-        semester: sem
+        semester: sem,
+        subject_id: subjectId || null
       };
       grades.push(newGrade);
       this.syncToCloud('grades', newGrade);
@@ -270,17 +298,22 @@ const DataStore = {
 
     localStorage.setItem(STORAGE_KEYS.GRADES, JSON.stringify(grades));
   },
-  removeGradeRecord(classId, date, category) {
+  removeGradeRecord(classId, date, category, subjectId) {
     let grades = JSON.parse(localStorage.getItem(STORAGE_KEYS.GRADES)) || [];
-    grades = grades.filter(g => !(g.class_id === classId && g.date === date && g.category === category));
+    grades = grades.filter(g => !(g.class_id === classId && g.date === date && g.category === category && (g.subject_id || '') === (subjectId || '')));
     localStorage.setItem(STORAGE_KEYS.GRADES, JSON.stringify(grades));
 
     if (supabaseClient) {
-      supabaseClient.from('grades').delete()
+      let query = supabaseClient.from('grades').delete()
         .eq('class_id', classId)
         .eq('date', date)
-        .eq('category', category)
-        .then(({ error }) => { if (error) console.error('Cloud Delete Grade Error:', error); });
+        .eq('category', category);
+      if (subjectId) {
+        query = query.eq('subject_id', subjectId);
+      } else {
+        query = query.is('subject_id', null);
+      }
+      query.then(({ error }) => { if (error) console.error('Cloud Delete Grade Error:', error); });
     }
   },
   getNotes(classId) {
@@ -410,6 +443,28 @@ const DataStore = {
         });
       }
 
+      // Smart Merge Subjects
+      try {
+        const { data: cloudSubj, error: errSubj } = await supabaseClient.from('subjects').select('*');
+        if (!errSubj && cloudSubj) {
+          const localSubj = JSON.parse(localStorage.getItem(STORAGE_KEYS.SUBJECTS)) || [];
+          const subjMap = new Map();
+          localSubj.forEach(s => subjMap.set(s.id, s));
+          cloudSubj.forEach(s => subjMap.set(s.id, s));
+
+          localStorage.setItem(STORAGE_KEYS.SUBJECTS, JSON.stringify(Array.from(subjMap.values())));
+
+          // Push any local subjects missing in cloud
+          localSubj.forEach(ls => {
+            if (!cloudSubj.some(cs => cs.id === ls.id)) {
+              this.syncToCloud('subjects', ls);
+            }
+          });
+        }
+      } catch (e) {
+        console.warn("Cloud Subjects Sync Warning:", e);
+      }
+
       // Smart Merge Attendance
       try {
         const { data: cloudAtt, error: errAtt } = await supabaseClient.from('attendance').select('*');
@@ -417,13 +472,13 @@ const DataStore = {
           const localAtt = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) || [];
           const attMap = new Map();
           
-          // Use class_student_date_semester composite key to merge and eliminate duplicates
+          // Use class_student_date_semester_subject composite key to merge and eliminate duplicates
           localAtt.forEach(a => {
-            const key = `${a.class_id}_${a.student_id}_${a.date}_${a.semester || '1'}`;
+            const key = `${a.class_id}_${a.student_id}_${a.date}_${a.semester || '1'}_${a.subject_id || 'default'}`;
             attMap.set(key, a);
           });
           cloudAtt.forEach(a => {
-            const key = `${a.class_id}_${a.student_id}_${a.date}_${a.semester || '1'}`;
+            const key = `${a.class_id}_${a.student_id}_${a.date}_${a.semester || '1'}_${a.subject_id || 'default'}`;
             attMap.set(key, a);
           });
 
@@ -431,8 +486,8 @@ const DataStore = {
           
           // Push any local attendance missing in cloud (matched by composite key)
           localAtt.forEach(la => {
-            const lKey = `${la.class_id}_${la.student_id}_${la.date}_${la.semester || '1'}`;
-            if (!cloudAtt.some(ca => `${ca.class_id}_${ca.student_id}_${ca.date}_${ca.semester || '1'}` === lKey)) {
+            const lKey = `${la.class_id}_${la.student_id}_${la.date}_${la.semester || '1'}_${la.subject_id || 'default'}`;
+            if (!cloudAtt.some(ca => `${ca.class_id}_${ca.student_id}_${ca.date}_${ca.semester || '1'}_${ca.subject_id || 'default'}` === lKey)) {
               this.syncToCloud('attendance', la);
             }
           });
@@ -448,13 +503,13 @@ const DataStore = {
           const localGrades = JSON.parse(localStorage.getItem(STORAGE_KEYS.GRADES)) || [];
           const grdMap = new Map();
           
-          // Use class_student_date_category_semester composite key to merge
+          // Use class_student_date_category_semester_subject composite key to merge
           localGrades.forEach(g => {
-            const key = `${g.class_id}_${g.student_id}_${g.date}_${g.category}_${g.semester || '1'}`;
+            const key = `${g.class_id}_${g.student_id}_${g.date}_${g.category}_${g.semester || '1'}_${g.subject_id || 'default'}`;
             grdMap.set(key, g);
           });
           cloudGrades.forEach(g => {
-            const key = `${g.class_id}_${g.student_id}_${g.date}_${g.category}_${g.semester || '1'}`;
+            const key = `${g.class_id}_${g.student_id}_${g.date}_${g.category}_${g.semester || '1'}_${g.subject_id || 'default'}`;
             grdMap.set(key, g);
           });
 
@@ -462,8 +517,8 @@ const DataStore = {
 
           // Push any local grades missing in cloud (matched by composite key)
           localGrades.forEach(lg => {
-            const lKey = `${lg.class_id}_${lg.student_id}_${lg.date}_${lg.category}_${lg.semester || '1'}`;
-            if (!cloudGrades.some(cg => `${cg.class_id}_${cg.student_id}_${cg.date}_${cg.category}_${cg.semester || '1'}` === lKey)) {
+            const lKey = `${lg.class_id}_${lg.student_id}_${lg.date}_${lg.category}_${lg.semester || '1'}_${lg.subject_id || 'default'}`;
+            if (!cloudGrades.some(cg => `${cg.class_id}_${cg.student_id}_${cg.date}_${cg.category}_${cg.semester || '1'}_${cg.subject_id || 'default'}` === lKey)) {
               this.syncToCloud('grades', lg);
             }
           });

@@ -427,6 +427,40 @@ body.logged-in .app-content-container {
   border-color: #d4d4d8;
 }
 
+@media (max-width: 480px) {
+  .class-card {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 14px 16px !important;
+    gap: 10px !important;
+  }
+  .class-info {
+    width: 100% !important;
+  }
+  .class-dropdown-select {
+    flex: 1;
+    width: 100%;
+  }
+  .class-card > div:last-child {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    width: 100%;
+    gap: 8px;
+  }
+  .class-card > div:last-child > div {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .class-card > div:last-child select {
+    width: auto;
+    flex: 1;
+    min-width: 0;
+  }
+}
+
 .class-arrow {
   color: #71717a;
 }

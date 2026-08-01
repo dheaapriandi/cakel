@@ -146,6 +146,7 @@
       <div class="header-dropdown-menu" id="header-dropdown-menu">
         <button class="dropdown-item" id="menu-opt-classes">🏫 Kelola Kelas</button>
         <button class="dropdown-item" id="menu-opt-students">👨‍🎓 Kelola Data Siswa</button>
+        <button class="dropdown-item" id="menu-opt-subjects">📚 Kelola Mapel</button>
         <button class="dropdown-item" id="menu-opt-export">📊 Ekspor Ke Excel</button>
         <div class="dropdown-divider"></div>
         <button class="dropdown-item" id="menu-opt-settings">⚙️ Pengaturan & Cloud</button>
@@ -170,12 +171,21 @@
         </select>
       </div>
 
-      <div class="semester-info" style="display: flex; align-items: center; gap: 8px;">
-        <label for="semester-dropdown" style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">Semester:</label>
-        <select id="semester-dropdown" class="class-dropdown-select">
-          <option value="1">📘 Semester 1 (Ganjil)</option>
-          <option value="2">📙 Semester 2 (Genap)</option>
-        </select>
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <div class="semester-info" style="display: flex; align-items: center; gap: 8px;">
+          <label for="semester-dropdown" style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">Semester:</label>
+          <select id="semester-dropdown" class="class-dropdown-select">
+            <option value="1">📘 Semester 1 (Ganjil)</option>
+            <option value="2">📙 Semester 2 (Genap)</option>
+          </select>
+        </div>
+
+        <div class="subject-info" style="display: flex; align-items: center; gap: 8px;">
+          <label for="subject-dropdown" style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">Mapel:</label>
+          <select id="subject-dropdown" class="class-dropdown-select">
+            <!-- Populated by JS -->
+          </select>
+        </div>
       </div>
     </div>
 
@@ -369,10 +379,11 @@
       </div>
 
       <div class="card setting-card">
-        <h3>Kelola Kelas & Siswa</h3>
+        <h3>Kelola Kelas, Siswa & Mapel</h3>
         <div class="btn-group-vertical">
           <button class="btn btn-outline" id="manage-classes-btn">🏫 Kelola Daftar Kelas</button>
           <button class="btn btn-outline" id="manage-students-btn">👨‍🎓 Kelola Data Siswa</button>
+          <button class="btn btn-outline" id="manage-subjects-btn">📚 Kelola Mata Pelajaran</button>
         </div>
       </div>
 
@@ -396,7 +407,7 @@
             ⚠️ Penting: Update Skema Database Supabase Anda
           </h4>
           <p style="font-size: 12px; color: #71717a; margin-top: 4px; line-height: 1.4;">
-            Jika Anda menggunakan project Supabase pribadi, pastikan Anda telah menjalankan skrip SQL berikut di <b>Supabase Dashboard -> SQL Editor</b> agar sinkronisasi Semester & Catatan berfungsi:
+            Jika Anda menggunakan project Supabase pribadi, pastikan Anda telah menjalankan skrip SQL berikut di <b>Supabase Dashboard -> SQL Editor</b> agar sinkronisasi Semester, Catatan, dan Mapel berfungsi:
           </p>
           <pre style="background: #18181b; color: #a7f3d0; font-size: 11px; padding: 10px; border-radius: 8px; overflow-x: auto; margin-top: 8px; font-family: monospace; user-select: all; white-space: pre;">-- 1. Tambah kolom semester jika belum ada
 ALTER TABLE attendance ADD COLUMN IF NOT EXISTS semester text DEFAULT '1';
@@ -418,7 +429,19 @@ CREATE TABLE IF NOT EXISTS app_settings (
   key text PRIMARY KEY,
   value jsonb,
   created_at timestamptz DEFAULT now()
-);</pre>
+);
+
+-- 4. Buat tabel subjects untuk mata pelajaran
+CREATE TABLE IF NOT EXISTS subjects (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  class_id uuid REFERENCES classes(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  created_at timestamptz DEFAULT now()
+);
+
+-- 5. Tambah kolom subject_id ke tabel attendance dan grades
+ALTER TABLE attendance ADD COLUMN IF NOT EXISTS subject_id uuid REFERENCES subjects(id) ON DELETE SET NULL;
+ALTER TABLE grades ADD COLUMN IF NOT EXISTS subject_id uuid REFERENCES subjects(id) ON DELETE SET NULL;</pre>
         </div>
       </div>
 
@@ -587,6 +610,25 @@ CREATE TABLE IF NOT EXISTS app_settings (
         </div>
         <div id="student-roster-container" class="item-list-container mt-12">
           <!-- List of students in current class -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Kelola Mapel -->
+  <div class="modal" id="modal-manage-subjects">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Kelola Mata Pelajaran</h3>
+        <button class="close-btn" data-close="modal-manage-subjects">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group flex-row">
+          <input type="text" id="new-subject-name" placeholder="Tambah Mapel (misal: Matematika)" class="form-input">
+          <button class="btn btn-primary" id="add-subject-btn">Tambah</button>
+        </div>
+        <div id="subject-list-container" class="item-list-container mt-12">
+          <!-- List of subjects -->
         </div>
       </div>
     </div>

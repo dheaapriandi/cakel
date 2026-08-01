@@ -4,7 +4,8 @@ function renderNilaiTab(classId) {
   if (!container) return;
 
   const semester = window.getCurrentSemester ? window.getCurrentSemester() : '1';
-  const grades = window.DataStore.getGrades(classId, semester);
+  const subjectId = window.getActiveSubjectId ? window.getActiveSubjectId() : '';
+  const grades = window.DataStore.getGrades(classId, semester, subjectId);
   const students = window.DataStore.getStudents(classId);
   
   if (grades.length === 0) {
@@ -77,7 +78,9 @@ function viewOrEditExamRecord(date, encodedTitle) {
   const title = decodeURIComponent(encodedTitle);
   const currentClassId = document.getElementById('class-dropdown').value;
   const students = window.DataStore.getStudents(currentClassId);
-  const grades = window.DataStore.getGrades(currentClassId);
+  const semester = window.getCurrentSemester ? window.getCurrentSemester() : '1';
+  const subjectId = window.getActiveSubjectId ? window.getActiveSubjectId() : '';
+  const grades = window.DataStore.getGrades(currentClassId, semester, subjectId);
 
   const titleInput = document.getElementById('input-nilai-title');
   const dateInput = document.getElementById('input-nilai-date');
@@ -113,7 +116,8 @@ function deleteExamRecordConfirm(classId, date, encodedTitle) {
   const title = decodeURIComponent(encodedTitle);
   const formattedDate = window.formatDateIndo(date);
   if (confirm(`Apakah Anda yakin ingin menghapus data nilai "${title}" pada tanggal ${formattedDate}?`)) {
-    window.DataStore.removeGradeRecord(classId, date, title);
+    const subjectId = window.getActiveSubjectId ? window.getActiveSubjectId() : '';
+    window.DataStore.removeGradeRecord(classId, date, title, subjectId);
     if (window.refreshAppViews) window.refreshAppViews();
   }
 }
@@ -171,7 +175,9 @@ function saveInputNilai() {
     });
   });
 
-  window.DataStore.saveGradeRecord(currentClassId, date, category, studentScores);
+  const semester = window.getCurrentSemester ? window.getCurrentSemester() : '1';
+  const subjectId = window.getActiveSubjectId ? window.getActiveSubjectId() : '';
+  window.DataStore.saveGradeRecord(currentClassId, date, category, studentScores, semester, subjectId);
 
   const modal = document.getElementById('modal-input-nilai');
   if (modal) modal.classList.remove('open');
