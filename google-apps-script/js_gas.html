@@ -1,0 +1,306 @@
+<!-- Google Apps Script DataStore Bridge for Cakel -->
+<script>
+const STORAGE_KEYS = {
+  CLASSES: 'absensi_classes_data',
+  STUDENTS: 'absensi_students_data',
+  ATTENDANCE: 'absensi_attendance_data',
+  GRADES: 'absensi_grades_data',
+  NOTES: 'absensi_notes_data',
+  AUTH: 'absensi_auth_credentials'
+};
+
+function generateDeterministicUUID(seed) {
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (let i = 0, c; i < seed.length; i++) {
+    c = seed.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 2654435761);
+    h2 = Math.imul(h2 ^ c, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  const hex = ((h1 >>> 0).toString(16).padStart(8, '0') + 
+               (h2 >>> 0).toString(16).padStart(8, '0') + 
+               (h1 ^ h2 >>> 0).toString(16).padStart(16, '0')).slice(0, 32);
+  return `${hex.slice(0,8)}-${hex.slice(8,12)}-4${hex.slice(13,16)}-a${hex.slice(17,20)}-${hex.slice(20,32)}`;
+}
+
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+// Promisify google.script.run calls
+function callGAS(functionName, ...args) {
+  return new Promise((resolve, reject) => {
+    if (typeof google === 'undefined' || !google.script || !google.script.run) {
+      console.warn("GAS Environment not found. Running in Local Mock mode.");
+      resolve(null);
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(reject)[functionName](...args);
+  });
+}
+
+function loadInitialSeedData() {
+  const defaultClass = { id: 'a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d', name: 'Kelas X DKV' };
+
+  let classes = JSON.parse(localStorage.getItem(STORAGE_KEYS.CLASSES));
+  if (!classes || classes.length === 0) {
+    classes = [defaultClass];
+    localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify(classes));
+  }
+
+  let students = JSON.parse(localStorage.getItem(STORAGE_KEYS.STUDENTS));
+  if (!students) {
+    localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify([]));
+  }
+
+  let attendance = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE));
+  if (!attendance) {
+    localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify([]));
+  }
+
+  let grades = JSON.parse(localStorage.getItem(STORAGE_KEYS.GRADES));
+  if (!grades) {
+    localStorage.setItem(STORAGE_KEYS.GRADES, JSON.stringify([]));
+  }
+}
+
+const DataStore = {
+  getClasses() {
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.CLASSES)) || [];
+  },
+  addClass(name) {
+    const classes = this.getClasses();
+    const newClass = { id: generateUUID(), name };
+    classes.push(newClass);
+    localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify(classes));
+    callGAS('addClass', newClass).catch(err => console.error("GAS Add Class Error:", err));
+    return newClass;
+  },
+  removeClass(id) {
+    let classes = this.getClasses();
+    classes = classes.filter(c => c.id !== id);
+    localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify(classes));
+    
+    let students = JSON.parse(localStorage.getItem(STORAGE_KEYS.STUDENTS)) || [];
+    students = students.filter(s => s.class_id !== id);
+    localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
+    
+    let attendance = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) || [];
+    attendance = attendance.filter(a => a.class_id !== id);
+    localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(attendance));
+
+    let grades = JSON.parse(localStorage.getItem(STORAGE_KEYS.GRADES)) || [];
+    grades = grades.filter(g => g.class_id !== id);
+    localStorage.setItem(STORAGE_KEYS.GRADES, JSON.stringify(grades));
+
+    callGAS('removeClass', id).catch(err => console.error("GAS Remove Class Error:", err));
+  },
+  getStudents(classId) {
+    const students = JSON.parse(localStorage.getItem(STORAGE_KEYS.STUDENTS)) || [];
+    return classId ? students.filter(s => s.class_id === classId) : students;
+  },
+  addStudent(classId, name, nis) {
+    const students = this.getStudents();
+    const newStudent = { id: generateUUID(), class_id: classId, name, nis: nis || '' };
+    students.push(newStudent);
+    students.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'id', { sensitivity: 'base' }));
+    localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
+    callGAS('addStudent', newStudent).catch(err => console.error("GAS Add Student Error:", err));
+    return newStudent;
+  },
+  addStudentsBatch(classId, studentsArray) {
+    const students = this.getStudents();
+    const preparedArray = [];
+    studentsArray.forEach(item => {
+      const newStudent = {
+        id: generateUUID(),
+        class_id: classId,
+        name: item.name,
+        nis: item.nis || ''
+      };
+      students.push(newStudent);
+      preparedArray.push(newStudent);
+    });
+    students.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'id', { sensitivity: 'base' }));
+    localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
+    callGAS('addStudentsBatch', preparedArray).catch(err => console.error("GAS Batch Add Error:", err));
+  },
+  removeStudent(id) {
+    let students = this.getStudents();
+    students = students.filter(s => s.id !== id);
+    localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
+    callGAS('removeStudent', id).catch(err => console.error("GAS Remove Student Error:", err));
+  },
+  removeAttendanceByDate(classId, date) {
+    let records = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) || [];
+    records = records.filter(r => !(r.class_id === classId && r.date === date));
+    localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(records));
+    callGAS('removeAttendanceByDate', classId, date).catch(err => console.error("GAS Remove Attendance Error:", err));
+  },
+  getAttendance(classId, date, semester) {
+    const records = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) || [];
+    const targetSem = semester || (window.getCurrentSemester ? window.getCurrentSemester() : '1');
+    return records.filter(r => {
+      const matchClass = !classId || r.class_id === classId;
+      const matchDate = !date || r.date === date;
+      const recordSem = String(r.semester || '1');
+      const matchSem = !targetSem || recordSem === String(targetSem);
+      return matchClass && matchDate && matchSem;
+    });
+  },
+  saveAttendanceRecord(classId, date, time, studentStatuses, semester) {
+    let records = JSON.parse(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) || [];
+    const sem = semester || (window.getCurrentSemester ? window.getCurrentSemester() : '1');
+
+    records = records.filter(r => !(r.class_id === classId && r.date === date && String(r.semester || '1') === String(sem)));
+
+    const preparedBatch = [];
+    studentStatuses.forEach(item => {
+      const deterministicId = generateDeterministicUUID(`${classId}_${item.student_id}_${date}_${sem}`);
+      const newRec = {
+        id: deterministicId,
+        class_id: classId,
+        date: date,
+        time: time || new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+        student_id: item.student_id,
+        status: item.status,
+        semester: String(sem)
+      };
+      records.push(newRec);
+      preparedBatch.push(newRec);
+    });
+
+    localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(records));
+    callGAS('saveAttendanceRecordBatch', classId, date, time || new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }), preparedBatch, sem)
+      .catch(err => console.error("GAS Save Attendance Error:", err));
+  },
+  getGrades(classId, semester) {
+    const grades = JSON.parse(localStorage.getItem(STORAGE_KEYS.GRADES)) || [];
+    return grades.filter(g => {
+      const matchClass = !classId || g.class_id === classId;
+      const matchSem = !semester || !g.semester || String(g.semester) === String(semester);
+      return matchClass && matchSem;
+    });
+  },
+  saveGradeRecord(classId, date, category, studentScores, semester) {
+    let grades = JSON.parse(localStorage.getItem(STORAGE_KEYS.GRADES)) || [];
+    grades = grades.filter(g => !(g.class_id === classId && g.date === date && g.category === category));
+    
+    const sem = semester || (window.getCurrentSemester ? window.getCurrentSemester() : '1');
+
+    const preparedBatch = [];
+    studentScores.forEach(item => {
+      const deterministicId = generateDeterministicUUID(`${classId}_${item.student_id}_${date}_${category}_${sem}`);
+      const newGrade = {
+        id: deterministicId,
+        class_id: classId,
+        date: date,
+        category: category,
+        title: category,
+        student_id: item.student_id,
+        score: parseFloat(item.score) || 0,
+        semester: sem
+      };
+      grades.push(newGrade);
+      preparedBatch.push(newGrade);
+    });
+
+    localStorage.setItem(STORAGE_KEYS.GRADES, JSON.stringify(grades));
+    callGAS('saveGradeRecordBatch', classId, date, category, preparedBatch, sem)
+      .catch(err => console.error("GAS Save Grades Error:", err));
+  },
+  removeGradeRecord(classId, date, category) {
+    let grades = JSON.parse(localStorage.getItem(STORAGE_KEYS.GRADES)) || [];
+    grades = grades.filter(g => !(g.class_id === classId && g.date === date && g.category === category));
+    localStorage.setItem(STORAGE_KEYS.GRADES, JSON.stringify(grades));
+    callGAS('removeGradeRecord', classId, date, category).catch(err => console.error("GAS Delete Grade Error:", err));
+  },
+  getNotes(classId) {
+    const notes = JSON.parse(localStorage.getItem(STORAGE_KEYS.NOTES)) || [];
+    return classId ? notes.filter(n => n.class_id === classId) : notes;
+  },
+  saveNoteItem(classId, noteData) {
+    let notes = JSON.parse(localStorage.getItem(STORAGE_KEYS.NOTES)) || [];
+    let noteItem = null;
+
+    if (noteData.id) {
+      notes = notes.map(n => {
+        if (n.id === noteData.id) {
+          noteItem = { ...n, ...noteData, class_id: classId };
+          return noteItem;
+        }
+        return n;
+      });
+    }
+
+    if (!noteItem) {
+      noteItem = {
+        id: noteData.id || generateUUID(),
+        class_id: classId,
+        title: noteData.title || 'Catatan Baru',
+        tag: noteData.tag || 'Tugas',
+        content: noteData.content || '',
+        date: noteData.date || new Date().toISOString().split('T')[0]
+      };
+      notes.push(noteItem);
+    }
+
+    localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(notes));
+    callGAS('saveNoteItem', classId, noteItem).catch(err => console.error("GAS Save Note Error:", err));
+    return noteItem;
+  },
+  deleteNoteItem(noteId) {
+    let notes = JSON.parse(localStorage.getItem(STORAGE_KEYS.NOTES)) || [];
+    notes = notes.filter(n => n.id !== noteId);
+    localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(notes));
+    callGAS('deleteNoteItem', noteId).catch(err => console.error("GAS Delete Note Error:", err));
+  },
+  getAdminCredentials() {
+    const creds = localStorage.getItem(STORAGE_KEYS.AUTH);
+    return creds ? JSON.parse(creds) : { username: 'admin', password: 'admin' };
+  },
+  async saveAdminCredentials(username, password) {
+    const creds = { username, password };
+    localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(creds));
+    await callGAS('saveAdminCredentials', username, password).catch(err => console.error("GAS Save Credentials Error:", err));
+    return creds;
+  },
+  async fetchFromCloud() {
+    try {
+      console.log("Syncing database with Google Sheets...");
+      const classes = await callGAS('getClasses') || [];
+      const students = await callGAS('getStudents') || [];
+      const attendance = await callGAS('getAttendance') || [];
+      const grades = await callGAS('getGrades') || [];
+      const notes = await callGAS('getNotes') || [];
+      const credentials = await callGAS('getAdminCredentials') || { username: 'admin', password: 'admin' };
+
+      localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify(classes));
+      localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
+      localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(attendance));
+      localStorage.setItem(STORAGE_KEYS.GRADES, JSON.stringify(grades));
+      localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(notes));
+      localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(credentials));
+
+      console.log("Database sync with Google Sheets successful.");
+      return true;
+    } catch(err) {
+      console.error("GAS Fetch From Cloud Error:", err);
+      return false;
+    }
+  },
+  async syncAllToCloudBatch() {
+    return true;
+  }
+};
+
+window.DataStore = DataStore;
+window.loadInitialSeedData = loadInitialSeedData;
+window.generateUUID = generateUUID;
+</script>

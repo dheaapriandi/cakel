@@ -1,0 +1,801 @@
+<script>
+// Main Application Router & Controller (GAS Version)
+document.addEventListener('DOMContentLoaded', async () => {
+  // Load Initial Seed Data if empty
+  window.loadInitialSeedData();
+
+  // Try fetching from Google Sheets database on load
+  if (window.DataStore && window.DataStore.fetchFromCloud) {
+    await window.DataStore.fetchFromCloud();
+  }
+
+  // Setup Auth System
+  setupAuthSystem();
+
+  // Setup Class & Semester Dropdowns
+  setupClassDropdown();
+  setupSemesterDropdown();
+
+  const dropdown = document.getElementById('class-dropdown');
+  if (dropdown) {
+    dropdown.addEventListener('change', () => {
+      refreshAppViews();
+    });
+  }
+
+  // Setup Navigation Tabs
+  setupNavigation();
+
+  // Setup Modal Listeners
+  setupModals();
+
+  // Setup Header Dropdown Menu
+  setupHeaderMenu();
+
+  // Setup FAB Buttons
+  setupFABs();
+
+  // Initial View Refresh
+  refreshAppViews();
+});
+
+function setupClassDropdown() {
+  const dropdown = document.getElementById('class-dropdown');
+  if (!dropdown) return;
+
+  const previousSelectedValue = dropdown.value;
+  const classes = window.DataStore.getClasses();
+  dropdown.innerHTML = '';
+
+  classes.forEach(cls => {
+    const opt = document.createElement('option');
+    opt.value = cls.id;
+    opt.textContent = cls.name;
+    dropdown.appendChild(opt);
+  });
+
+  // Preserve previously selected class if it exists in the list
+  if (previousSelectedValue && Array.from(dropdown.options).some(o => o.value === previousSelectedValue)) {
+    dropdown.value = previousSelectedValue;
+  }
+}
+
+function getCurrentSemester() {
+  const dropdown = document.getElementById('semester-dropdown');
+  return dropdown ? dropdown.value : (localStorage.getItem('absensi_active_semester') || '1');
+}
+
+function setupSemesterDropdown() {
+  const dropdown = document.getElementById('semester-dropdown');
+  if (!dropdown) return;
+
+  const saved = localStorage.getItem('absensi_active_semester');
+  if (saved) dropdown.value = saved;
+
+  dropdown.addEventListener('change', () => {
+    localStorage.setItem('absensi_active_semester', dropdown.value);
+    refreshAppViews();
+  });
+}
+
+window.getCurrentSemester = getCurrentSemester;
+
+function getCurrentClassId() {
+  const dropdown = document.getElementById('class-dropdown');
+  return dropdown ? dropdown.value : 'cls-1';
+}
+
+function setupNavigation() {
+  const navItems = document.querySelectorAll('.bottom-nav .nav-item, .sidebar-nav .sidebar-item');
+  const pageTitle = document.getElementById('page-title');
+
+  navItems.forEach(item => {
+    item.addEventListener('click', () => {
+      const targetTabId = item.getAttribute('data-tab');
+
+      // Update active state across all navigation elements
+      navItems.forEach(n => {
+        if (n.getAttribute('data-tab') === targetTabId) {
+          n.classList.add('active');
+        } else {
+          n.classList.remove('active');
+        }
+      });
+
+      // Hide all tabs & show target
+      document.querySelectorAll('.tab-page').forEach(page => {
+        page.classList.remove('active');
+      });
+      const targetPage = document.getElementById(targetTabId);
+      if (targetPage) targetPage.classList.add('active');
+
+      // Update Sub-Title
+      if (targetTabId === 'tab-beranda') pageTitle.textContent = 'Beranda';
+      if (targetTabId === 'tab-absensi') pageTitle.textContent = 'Absensi';
+      if (targetTabId === 'tab-nilai') pageTitle.textContent = 'Nilai';
+      if (targetTabId === 'tab-pengaturan') pageTitle.textContent = 'Pengaturan';
+
+      // Update Floating Action Buttons for active tab
+      updateFABContext(targetTabId);
+
+      // Refresh view for active tab
+      refreshAppViews();
+    });
+  });
+}
+
+function updateFABContext(tabId) {
+  const primaryFab = document.getElementById('fab-primary-btn');
+  const excelFab = document.getElementById('fab-export-btn');
+
+  if (!primaryFab || !excelFab) return;
+
+  if (tabId === 'tab-beranda') {
+    excelFab.style.display = 'flex';
+    primaryFab.style.display = 'flex';
+
+    // Green FAB: Clipboard Icon (Quick Save Absensi)
+    excelFab.className = 'fab fab-excel';
+    excelFab.title = 'Simpan Absensi';
+    excelFab.innerHTML = `
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm-2 14l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+      </svg>`;
+
+    // Black FAB: Person User Icon (Catat Absensi)
+    primaryFab.className = 'fab fab-add';
+    primaryFab.title = 'Isi Absensi';
+    primaryFab.innerHTML = `
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+      </svg>`;
+  } else if (tabId === 'tab-absensi') {
+    excelFab.style.display = 'flex';
+    primaryFab.style.display = 'flex';
+
+    // Green FAB: Excel Export
+    excelFab.className = 'fab fab-excel';
+    excelFab.title = 'Ekspor Excel';
+    excelFab.innerHTML = `
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+      </svg>`;
+
+    // Black FAB: Plus Icon (Tambah Siswa)
+    primaryFab.className = 'fab fab-add';
+    primaryFab.title = 'Tambah Siswa';
+    primaryFab.innerHTML = `
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+      </svg>`;
+  } else if (tabId === 'tab-nilai') {
+    excelFab.style.display = 'flex';
+    primaryFab.style.display = 'flex';
+
+    // Green FAB: Excel Export
+    excelFab.className = 'fab fab-excel';
+    excelFab.title = 'Ekspor Excel';
+    excelFab.innerHTML = `
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+      </svg>`;
+
+    // Black FAB: Plus Icon (Tambah Nilai)
+    primaryFab.className = 'fab fab-add';
+    primaryFab.title = 'Tambah Nilai Baru';
+    primaryFab.innerHTML = `
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+      </svg>`;
+  } else {
+    excelFab.style.display = 'none';
+    primaryFab.style.display = 'none';
+  }
+}
+
+function refreshAppViews() {
+  const classId = getCurrentClassId();
+  
+  // Refresh Beranda Dashboard
+  updateBerandaSummary(classId);
+
+  // Refresh Absensi Tab if active
+  if (document.getElementById('tab-absensi').classList.contains('active')) {
+    window.renderAbsensiTab(classId);
+  }
+
+  // Refresh Nilai Tab if active
+  if (document.getElementById('tab-nilai').classList.contains('active')) {
+    window.renderNilaiTab(classId);
+  }
+}
+
+function updateBerandaSummary(classId) {
+  const students = window.DataStore.getStudents(classId);
+  const totalStudents = students.length || 1;
+
+  // Render 6-Month Chart
+  window.renderAttendanceChart('attendance-chart');
+
+  // Attendance for Today - deduplicated per student
+  const todayStr = new Date().toISOString().split('T')[0];
+  const allTodayAttendance = window.DataStore.getAttendance(classId, todayStr);
+
+  const studentAttMap = new Map();
+  allTodayAttendance.forEach(a => {
+    studentAttMap.set(a.student_id, a.status);
+  });
+
+  let hadir = 0, izin = 0, sakit = 0, alpa = 0;
+  if (studentAttMap.size > 0) {
+    studentAttMap.forEach(status => {
+      if (status === 'Hadir') hadir++;
+      else if (status === 'Izin') izin++;
+      else if (status === 'Sakit') sakit++;
+      else if (status === 'Alpa') alpa++;
+    });
+  } else {
+    // Default fallback if no attendance recorded today yet
+    hadir = totalStudents;
+  }
+
+  const todayPercentage = Math.min(100, Math.round((hadir / totalStudents) * 100));
+  document.getElementById('today-percentage').textContent = `${todayPercentage}%`;
+  document.getElementById('today-fraction').textContent = `${Math.min(hadir, totalStudents)} / ${totalStudents}`;
+
+  document.getElementById('count-hadir').textContent = hadir;
+  document.getElementById('count-izin').textContent = izin;
+  document.getElementById('count-sakit').textContent = sakit;
+  document.getElementById('count-alpa').textContent = alpa;
+
+  // Last Attendance Entry Card
+  const semester = getCurrentSemester();
+  const allAttendance = window.DataStore.getAttendance(classId, null, semester);
+  if (allAttendance.length > 0) {
+    // Sort chronologically by date and time to guarantee the latest is at the end
+    allAttendance.sort((a, b) => {
+      const dateTimeA = `${a.date}T${a.time || '00:00'}`;
+      const dateTimeB = `${b.date}T${b.time || '00:00'}`;
+      return dateTimeA.localeCompare(dateTimeB);
+    });
+
+    const lastRec = allAttendance[allAttendance.length - 1];
+    const lastRecs = allAttendance.filter(a => a.date === lastRec.date);
+    const lHadir = lastRecs.filter(a => a.status === 'Hadir').length;
+    const lIzin = lastRecs.filter(a => a.status === 'Izin').length;
+    const lSakit = lastRecs.filter(a => a.status === 'Sakit').length;
+    const lAlpa = lastRecs.filter(a => a.status === 'Alpa').length;
+
+    document.getElementById('last-absensi-date').textContent = `${window.formatDateIndo(lastRec.date)}${lastRec.time ? ', ' + lastRec.time : ''}`;
+    document.getElementById('last-absensi-ratio').textContent = `${lHadir}/${lastRecs.length}`;
+    document.getElementById('last-hadir').textContent = lHadir;
+    document.getElementById('last-izin').textContent = lIzin;
+    document.getElementById('last-sakit').textContent = lSakit;
+    document.getElementById('last-alpa').textContent = lAlpa;
+  }
+
+  // Last Grade Entry Card
+  const allGrades = window.DataStore.getGrades(classId, semester);
+  if (allGrades.length > 0) {
+    // Sort chronologically by date to guarantee the latest is at the end
+    allGrades.sort((a, b) => a.date.localeCompare(b.date));
+
+    const lastGrade = allGrades[allGrades.length - 1];
+    const categoryGrades = allGrades.filter(g => g.date === lastGrade.date && g.category === lastGrade.category);
+    const scores = categoryGrades.map(g => g.score);
+    const sum = scores.reduce((a, b) => a + b, 0);
+    const avg = Math.round(sum / scores.length);
+    const max = Math.max(...scores);
+    const min = Math.min(...scores);
+
+    document.getElementById('last-grade-date').textContent = window.formatDateIndo(lastGrade.date);
+    document.getElementById('last-grade-title').textContent = lastGrade.category || 'Ulangan';
+    document.getElementById('last-grade-students').textContent = `${scores.length}/${totalStudents}`;
+    document.getElementById('last-grade-avg').textContent = Math.round(avg);
+    document.getElementById('last-grade-max').textContent = max;
+    document.getElementById('last-grade-min').textContent = min;
+  }
+
+  // Render Top Students & Class Notes Widgets
+  renderTopStudents(classId);
+  renderClassNotesList(classId);
+}
+
+function renderClassNotesList(classId) {
+  const container = document.getElementById('notes-list-container');
+  if (!container) return;
+
+  const notes = window.DataStore.getNotes(classId);
+  if (notes.length === 0) {
+    container.innerHTML = `
+      <div class="text-muted p-12 text-center" style="font-size: 13px;">
+        Belum ada catatan. Klik tombol <b>+ Tambah Catatan</b> untuk membuat catatan baru.
+      </div>
+    `;
+    return;
+  }
+
+  const tagColors = {
+    'Tugas': { bg: '#e0f2fe', text: '#0369a1', emoji: '🔵' },
+    'Penting': { bg: '#fee2e2', text: '#b91c1c', emoji: '🔴' },
+    'Pengingat': { bg: '#fef3c7', text: '#b45309', emoji: '🟡' },
+    'Info': { bg: '#dcfce7', text: '#15803d', emoji: '🟢' }
+  };
+
+  let html = '';
+  notes.forEach(note => {
+    const style = tagColors[note.tag] || tagColors['Tugas'];
+    const formattedDate = window.formatDateIndo ? window.formatDateIndo(note.date) : note.date;
+
+    html += `
+      <div class="note-card-item" style="background: #ffffff; border-radius: 12px; padding: 12px 14px; border: 1px solid #e4e4e7; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="background: ${style.bg}; color: ${style.text}; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px;">
+            ${style.emoji} ${note.tag || 'Tugas'}
+          </span>
+          <span style="font-size: 11px; color: #a1a1aa;">${formattedDate}</span>
+        </div>
+        <div style="font-size: 14px; font-weight: 700; color: #18181b; margin-bottom: 4px;">${note.title}</div>
+        <div style="font-size: 13px; color: #52525b; line-height: 1.4; white-space: pre-wrap;">${note.content || '-'}</div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+          <button class="btn-text" style="color: #4f46e5; font-size: 12px; font-weight: 600;" onclick="openEditNoteModal('${note.id}')">✏️ Edit</button>
+          <button class="btn-text" style="color: #ef4444; font-size: 12px; font-weight: 600;" onclick="deleteNoteConfirm('${note.id}')">🗑️ Hapus</button>
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+function openEditNoteModal(noteId) {
+  const classId = getCurrentClassId();
+  const notes = window.DataStore.getNotes(classId);
+  const note = notes.find(n => n.id === noteId);
+
+  const modalTitle = document.getElementById('note-modal-title');
+  const editIdInput = document.getElementById('editing-note-id');
+  const titleInput = document.getElementById('note-title-input');
+  const tagSelect = document.getElementById('note-tag-select');
+  const contentInput = document.getElementById('note-content-input');
+
+  if (note) {
+    if (modalTitle) modalTitle.textContent = 'Edit Catatan';
+    if (editIdInput) editIdInput.value = note.id;
+    if (titleInput) titleInput.value = note.title;
+    if (tagSelect) tagSelect.value = note.tag || 'Tugas';
+    if (contentInput) contentInput.value = note.content || '';
+  } else {
+    if (modalTitle) modalTitle.textContent = 'Tambah Catatan Baru';
+    if (editIdInput) editIdInput.value = '';
+    if (titleInput) titleInput.value = '';
+    if (tagSelect) tagSelect.value = 'Tugas';
+    if (contentInput) contentInput.value = '';
+  }
+
+  const modal = document.getElementById('modal-note-editor');
+  if (modal) modal.classList.add('open');
+}
+
+function deleteNoteConfirm(noteId) {
+  if (confirm('Apakah Anda yakin ingin menghapus catatan ini?')) {
+    window.DataStore.deleteNoteItem(noteId);
+    refreshAppViews();
+  }
+}
+
+window.openEditNoteModal = openEditNoteModal;
+window.deleteNoteConfirm = deleteNoteConfirm;
+
+function renderTopStudents(classId) {
+  const container = document.getElementById('top-students-list');
+  if (!container) return;
+
+  const students = window.DataStore.getStudents(classId);
+  const grades = window.DataStore.getGrades(classId);
+
+  if (students.length === 0 || grades.length === 0) {
+    container.innerHTML = '<div class="text-muted p-12 text-center" style="font-size:13px;">Belum ada data nilai siswa.</div>';
+    return;
+  }
+
+  const studentAvgMap = [];
+  students.forEach(s => {
+    const sGrades = grades.filter(g => g.student_id === s.id);
+    if (sGrades.length > 0) {
+      const avg = sGrades.reduce((sum, g) => sum + (Number(g.score) || 0), 0) / sGrades.length;
+      studentAvgMap.push({ name: s.name, avg: Math.round(avg) });
+    }
+  });
+
+  studentAvgMap.sort((a, b) => b.avg - a.avg);
+
+  if (studentAvgMap.length === 0) {
+    container.innerHTML = '<div class="text-muted p-12 text-center" style="font-size:13px;">Belum ada data nilai siswa.</div>';
+    return;
+  }
+
+  const medals = ['🥇', '🥈', '🥉'];
+  let html = '';
+  studentAvgMap.slice(0, 4).forEach((s, idx) => {
+    html += `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f4f4f5;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span>${medals[idx] || (idx + 1) + '.'}</span>
+          <span style="font-size: 14px; font-weight: 600; color: #18181b;">${s.name}</span>
+        </div>
+        <span style="font-size: 14px; font-weight: 700; color: #10b981;">${s.avg}</span>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+function setupHeaderMenu() {
+  const menuBtn = document.getElementById('header-menu-btn');
+  const dropdown = document.getElementById('header-dropdown-menu');
+
+  if (menuBtn && dropdown) {
+    menuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.classList.toggle('active');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!dropdown.contains(e.target) && e.target !== menuBtn) {
+        dropdown.classList.remove('active');
+      }
+    });
+
+    document.getElementById('menu-opt-classes')?.addEventListener('click', () => {
+      dropdown.classList.remove('active');
+      renderClassListModal();
+      document.getElementById('modal-manage-classes').classList.add('open');
+    });
+
+    document.getElementById('menu-opt-students')?.addEventListener('click', () => {
+      dropdown.classList.remove('active');
+      renderStudentListModal();
+      document.getElementById('modal-manage-students').classList.add('open');
+    });
+
+    document.getElementById('menu-opt-export')?.addEventListener('click', () => {
+      dropdown.classList.remove('active');
+      window.exportDataToExcel(getCurrentClassId());
+    });
+
+    document.getElementById('menu-opt-settings')?.addEventListener('click', () => {
+      dropdown.classList.remove('active');
+      document.querySelector('[data-tab="tab-pengaturan"]')?.click();
+    });
+  }
+}
+
+function setupFABs() {
+  const exportBtn = document.getElementById('fab-export-btn');
+  const addBtn = document.getElementById('fab-primary-btn');
+  const exportAllBtn = document.getElementById('export-all-excel-btn');
+
+  if (exportBtn) {
+    exportBtn.addEventListener('click', () => {
+      const activeTab = document.querySelector('.bottom-nav .nav-item.active')?.getAttribute('data-tab');
+      if (activeTab === 'tab-beranda') {
+        window.saveCurrentAbsensi(getCurrentClassId());
+      } else {
+        window.exportDataToExcel(getCurrentClassId());
+      }
+    });
+  }
+
+  if (exportAllBtn) {
+    exportAllBtn.addEventListener('click', () => {
+      window.exportDataToExcel(getCurrentClassId());
+    });
+  }
+
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      const activeTab = document.querySelector('.bottom-nav .nav-item.active')?.getAttribute('data-tab');
+      if (activeTab === 'tab-absensi') {
+        renderStudentListModal();
+        const modal = document.getElementById('modal-manage-students');
+        if (modal) modal.classList.add('open');
+      } else if (activeTab === 'tab-nilai') {
+        window.openInputNilaiModal();
+      } else {
+        // Default on Beranda
+        document.querySelector('[data-tab="tab-absensi"]')?.click();
+      }
+    });
+  }
+
+  const saveAbsensiBtn = document.getElementById('save-absensi-btn');
+  if (saveAbsensiBtn) {
+    saveAbsensiBtn.addEventListener('click', () => {
+      window.saveCurrentAbsensi(getCurrentClassId());
+    });
+  }
+
+  const markAllBtn = document.getElementById('mark-all-hadir-btn');
+  if (markAllBtn) {
+    markAllBtn.addEventListener('click', window.markAllHadir);
+  }
+}
+
+function setupModals() {
+  // Close buttons
+  document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetModalId = btn.getAttribute('data-close');
+      const modal = document.getElementById(targetModalId);
+      if (modal) modal.classList.remove('open');
+    });
+  });
+
+  // Save Nilai Btn
+  const saveNilaiBtn = document.getElementById('save-nilai-btn');
+  if (saveNilaiBtn) {
+    saveNilaiBtn.addEventListener('click', window.saveInputNilai);
+  }
+
+  // Manage Classes Modal
+  const manageClassesBtn = document.getElementById('manage-classes-btn');
+  if (manageClassesBtn) {
+    manageClassesBtn.addEventListener('click', () => {
+      renderClassListModal();
+      document.getElementById('modal-manage-classes').classList.add('open');
+    });
+  }
+
+  const addClassBtn = document.getElementById('add-class-btn');
+  if (addClassBtn) {
+    addClassBtn.addEventListener('click', () => {
+      const nameInput = document.getElementById('new-class-name');
+      const name = nameInput.value.trim();
+      if (name) {
+        const newClass = window.DataStore.addClass(name);
+        nameInput.value = '';
+        setupClassDropdown();
+        if (newClass && newClass.id) {
+          const dropdown = document.getElementById('class-dropdown');
+          if (dropdown) dropdown.value = newClass.id;
+        }
+        renderClassListModal();
+        refreshAppViews();
+      }
+    });
+  }
+
+  // Manage Students Modal
+  const manageStudentsBtn = document.getElementById('manage-students-btn');
+  if (manageStudentsBtn) {
+    manageStudentsBtn.addEventListener('click', () => {
+      renderStudentListModal();
+      document.getElementById('modal-manage-students').classList.add('open');
+    });
+  }
+
+  const addStudentBtn = document.getElementById('add-student-btn');
+  if (addStudentBtn) {
+    addStudentBtn.addEventListener('click', () => {
+      const nameInput = document.getElementById('new-student-name');
+      const nisInput = document.getElementById('new-student-nis');
+      const name = nameInput.value.trim();
+      const nis = nisInput.value.trim();
+      const classId = getCurrentClassId();
+
+      if (name) {
+        window.DataStore.addStudent(classId, name, nis);
+        nameInput.value = '';
+        nisInput.value = '';
+        renderStudentListModal();
+        refreshAppViews();
+      }
+    });
+  }
+
+  // Batch Import & Sync Listeners
+  const openBatchBtn = document.getElementById('open-batch-import-btn');
+  if (openBatchBtn) {
+    openBatchBtn.addEventListener('click', () => {
+      document.getElementById('modal-batch-import')?.classList.add('open');
+    });
+  }
+
+  const processBatchBtn = document.getElementById('process-batch-import-btn');
+  if (processBatchBtn) {
+    processBatchBtn.addEventListener('click', () => {
+      window.processBatchStudentImport(getCurrentClassId());
+    });
+  }
+
+  // Multi-Notes Listeners
+  const addNoteBtn = document.getElementById('add-note-btn');
+  if (addNoteBtn) {
+    addNoteBtn.addEventListener('click', () => {
+      window.openEditNoteModal(null);
+    });
+  }
+
+  const saveNoteBtn = document.getElementById('save-note-btn');
+  if (saveNoteBtn) {
+    saveNoteBtn.addEventListener('click', () => {
+      const classId = getCurrentClassId();
+      const id = document.getElementById('editing-note-id').value;
+      const title = document.getElementById('note-title-input').value.trim();
+      const tag = document.getElementById('note-tag-select').value;
+      const content = document.getElementById('note-content-input').value.trim();
+
+      if (!title) {
+        alert('Harap isi judul catatan terlebih dahulu.');
+        return;
+      }
+
+      window.DataStore.saveNoteItem(classId, { id, title, tag, content });
+      document.getElementById('modal-note-editor')?.classList.remove('open');
+      refreshAppViews();
+    });
+  }
+}
+
+function setupAuthSystem() {
+  const SESSION_KEY = 'absensi_session_logged_in';
+
+  // Get current credentials
+  const getCreds = () => window.DataStore ? window.DataStore.getAdminCredentials() : (JSON.parse(localStorage.getItem('absensi_auth_credentials')) || { username: 'admin', password: 'admin' });
+
+  const loginScreen = document.getElementById('login-screen');
+  const loginForm = document.getElementById('login-form');
+  const errorMsg = document.getElementById('login-error-msg');
+
+  // Check login session status
+  const isLoggedIn = localStorage.getItem(SESSION_KEY) === 'true';
+  if (loginScreen) {
+    if (isLoggedIn) {
+      document.body.classList.add('logged-in');
+      loginScreen.style.display = 'none';
+    } else {
+      document.body.classList.remove('logged-in');
+      loginScreen.style.display = 'flex';
+    }
+  }
+
+  // Handle Login Form Submit
+  if (loginForm) {
+    loginForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const uInput = document.getElementById('login-username').value.trim();
+      const pInput = document.getElementById('login-password').value.trim();
+
+      const currentCreds = getCreds();
+
+      if (uInput === currentCreds.username && pInput === currentCreds.password) {
+        localStorage.setItem(SESSION_KEY, 'true');
+        document.body.classList.add('logged-in');
+        if (errorMsg) errorMsg.style.display = 'none';
+        if (loginScreen) loginScreen.style.display = 'none';
+        refreshAppViews();
+      } else {
+        if (errorMsg) {
+          errorMsg.textContent = '❌ Username atau Password salah!';
+          errorMsg.style.display = 'block';
+        }
+      }
+    });
+  }
+
+  // Settings Tab Auth Config Form
+  const cfgU = document.getElementById('cfg-auth-username');
+  const currentCreds = getCreds();
+  if (cfgU) cfgU.value = currentCreds.username;
+
+  const saveAuthBtn = document.getElementById('save-auth-config');
+  const authStatus = document.getElementById('auth-status');
+
+  if (saveAuthBtn) {
+    saveAuthBtn.addEventListener('click', async () => {
+      const newU = document.getElementById('cfg-auth-username').value.trim();
+      const newP = document.getElementById('cfg-auth-password').value.trim();
+
+      if (newU && newP) {
+        if (window.DataStore && window.DataStore.saveAdminCredentials) {
+          await window.DataStore.saveAdminCredentials(newU, newP);
+        } else {
+          localStorage.setItem('absensi_auth_credentials', JSON.stringify({ username: newU, password: newP }));
+        }
+        if (authStatus) {
+          authStatus.style.color = '#22c55e';
+          authStatus.textContent = '✅ Akun Admin berhasil diperbarui & disinkronkan ke Cloud!';
+        }
+      } else {
+        if (authStatus) {
+          authStatus.style.color = '#ef4444';
+          authStatus.textContent = '⚠️ Username dan Password baru tidak boleh kosong.';
+        }
+      }
+    });
+  }
+
+  // Logout Button
+  const logoutBtn = document.getElementById('app-logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      localStorage.setItem(SESSION_KEY, 'false');
+      document.body.classList.remove('logged-in');
+      if (loginScreen) loginScreen.style.display = 'flex';
+      document.querySelector('[data-tab="tab-beranda"]')?.click();
+    });
+  }
+}
+
+function renderClassListModal() {
+  const container = document.getElementById('class-list-container');
+  if (!container) return;
+
+  const classes = window.DataStore.getClasses();
+  if (classes.length === 0) {
+    container.innerHTML = '<div class="text-muted p-12">Belum ada kelas. Silakan tambah kelas baru di atas.</div>';
+    return;
+  }
+
+  let html = '';
+  classes.forEach(c => {
+    html += `
+      <div class="student-item-row" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
+        <span class="student-name">${c.name}</span>
+        <button class="btn-text" style="color: #ef4444; font-size: 13px; font-weight: 600;" onclick="deleteClassConfirm('${c.id}', '${c.name}')">🗑️ Hapus</button>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+}
+
+function deleteClassConfirm(classId, className) {
+  if (confirm(`Apakah Anda yakin ingin menghapus "${className}" beserta seluruh data siswa di dalamnya?`)) {
+    window.DataStore.removeClass(classId);
+    setupClassDropdown();
+    renderClassListModal();
+    refreshAppViews();
+  }
+}
+
+function renderStudentListModal() {
+  const container = document.getElementById('student-roster-container');
+  if (!container) return;
+
+  const classId = getCurrentClassId();
+  const students = window.DataStore.getStudents(classId);
+
+  if (students.length === 0) {
+    container.innerHTML = '<div class="text-muted p-12">Belum ada siswa di kelas ini.</div>';
+    return;
+  }
+
+  let html = '';
+  students.forEach(s => {
+    html += `
+      <div class="student-item-row" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
+        <div>
+          <div class="student-name">${s.name}</div>
+          <div class="student-nis">${s.nis ? 'NIS: ' + s.nis : ''}</div>
+        </div>
+        <button class="btn-text" style="color: #ef4444; font-size: 13px; font-weight: 600;" onclick="deleteStudentConfirm('${s.id}', '${s.name}')">🗑️ Hapus</button>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+}
+
+function deleteStudentConfirm(studentId, studentName) {
+  if (confirm(`Hapus siswa "${studentName}" dari kelas ini?`)) {
+    window.DataStore.removeStudent(studentId);
+    renderStudentListModal();
+    refreshAppViews();
+  }
+}
+
+window.deleteClassConfirm = deleteClassConfirm;
+window.deleteStudentConfirm = deleteStudentConfirm;
+window.refreshAppViews = refreshAppViews;
+</script>
